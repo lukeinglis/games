@@ -1,25 +1,27 @@
+import Link from "next/link";
 import { Game } from "@/data/games";
 
 const categoryColors: Record<string, string> = {
   Prediction: "bg-accent-green text-navy",
   Fantasy: "bg-gold text-navy",
+  Sports: "bg-sports-blue text-white",
+  Racing: "bg-action-red text-white",
+  Trivia: "bg-puzzle-purple text-white",
 };
 
 export function GameCard({ game, size = "normal" }: { game: Game; size?: "normal" | "large" }) {
   const isLarge = size === "large";
+  const isExternal = game.external ?? game.url.startsWith("http");
 
-  return (
-    <a
-      href={game.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`
-        group block rounded-2xl border-2 border-navy-lighter bg-navy-light
-        transition-all duration-200
-        hover:border-gold hover:glow-gold hover:scale-[1.02]
-        ${isLarge ? "p-6" : "p-4"}
-      `}
-    >
+  const wrapperClass = `
+    group block rounded-2xl border-2 border-navy-lighter bg-navy-light
+    transition-all duration-200
+    hover:border-gold hover:glow-gold hover:scale-[1.02]
+    ${isLarge ? "p-6" : "p-4"}
+  `;
+
+  const inner = (
+    <>
       <div
         className={`
           flex items-center justify-center rounded-xl
@@ -68,6 +70,25 @@ export function GameCard({ game, size = "normal" }: { game: Game; size?: "normal
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
       </span>
-    </a>
+    </>
+  );
+
+  if (isExternal) {
+    return (
+      <a
+        href={game.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={wrapperClass}
+      >
+        {inner}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={game.url} className={wrapperClass}>
+      {inner}
+    </Link>
   );
 }
