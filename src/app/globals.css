@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #0A1628;
+  --color-navy-light: #132240;
+  --color-navy-lighter: #1C3360;
+  --color-gold: #FFD700;
+  --color-gold-dark: #B8960F;
+  --color-accent-green: #00E676;
+  --color-pitch-green: #1B5E20;
+  --color-action-red: #FF1744;
+  --color-puzzle-purple: #AA00FF;
+  --color-sports-blue: #2979FF;
+  --color-hot-pink: #FF4081;
+
+  --font-heading: var(--font-press-start);
+  --font-body: var(--font-source-sans);
+}
+
+body {
+  background-color: var(--color-navy);
+  color: #ededed;
+  font-family: var(--font-body), "Source Sans 3", sans-serif;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.scanline-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.scanline-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+}
+
+.glow-gold {
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4), 0 0 30px rgba(255, 215, 0, 0.1);
+}
+
+.glow-green {
+  box-shadow: 0 0 15px rgba(0, 230, 118, 0.4), 0 0 30px rgba(0, 230, 118, 0.1);
+}
