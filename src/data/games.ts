@@ -22,7 +22,7 @@ export const games: Game[] = [
     thumbnailColor: "#1B5E20",
     emoji: "⚽",
     url: "https://worldcup.lukeinglis.me",
-    featured: true,
+    featured: false,
     external: true,
   },
   {
@@ -34,7 +34,7 @@ export const games: Game[] = [
     thumbnailColor: "#FF1744",
     emoji: "🏎️",
     url: "https://f1.lukeinglis.com",
-    featured: true,
+    featured: false,
     external: true,
   },
   {
@@ -69,7 +69,7 @@ export const games: Game[] = [
     thumbnailColor: "#AA00FF",
     emoji: "🏴",
     url: "/games/guess-the-flag",
-    featured: false,
+    featured: true,
   },
   {
     slug: "breakaway",
@@ -91,7 +91,7 @@ export const games: Game[] = [
     thumbnailColor: "#FF8000",
     emoji: "🏈",
     url: "/games/field-goal",
-    featured: false,
+    featured: true,
   },
   {
     slug: "f1-racer",
