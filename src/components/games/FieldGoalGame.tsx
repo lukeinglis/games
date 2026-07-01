@@ -167,18 +167,15 @@ export default function FieldGoalGame() {
   const scaleRef = useRef(1);
 
   // React state for overlay UI
-  const [gamePhase, setGamePhase] = useState<GamePhase>("menu");
-  const [displayScore, setDisplayScore] = useState(0);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [_gamePhase, setGamePhase] = useState<GamePhase>("menu");
+  const [_displayScore, setDisplayScore] = useState(0);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard());
 
-  // Load best score + leaderboard from localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem("fg_best_score");
       if (saved) bestScoreRef.current = parseInt(saved, 10) || 0;
     } catch { /* noop */ }
-
-    setLeaderboard(loadLeaderboard());
   }, []);
 
   // --- Game logic ---

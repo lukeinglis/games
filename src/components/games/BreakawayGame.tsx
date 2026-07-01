@@ -158,15 +158,10 @@ export default function BreakawayGame() {
 
   // React state for UI overlay
   const [gameState, setGameState] = useState<GameState>("menu");
-  const [yards, setYards] = useState(0);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [_yards, setYards] = useState(0);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard());
   const [scoreSaved, setScoreSaved] = useState(false);
   const [scoreRank, setScoreRank] = useState<number | null>(null);
-
-  // Load leaderboard from localStorage on mount
-  useEffect(() => {
-    setLeaderboard(loadLeaderboard());
-  }, []);
 
   // --- Game logic ---
 
@@ -785,7 +780,6 @@ export default function BreakawayGame() {
 
       // Tacklers
       for (const t of tacklersRef.current) {
-        const tw = t.wide ? TACKLER_W_WIDE : TACKLER_W;
         const tlane = t.wide ? Math.min(t.lane, LANE_COUNT - 2) : t.lane;
         const tcx = t.wide
           ? SIDELINE_W + tlane * LANE_W + LANE_W

@@ -128,18 +128,14 @@ export default function F1Game() {
   });
 
   const animRef = useRef<number>(0);
+  const gameLoopRef = useRef<(timestamp: number) => void>(() => {});
   const endGameRef = useRef<() => void>(() => {});
   const activePointerRef = useRef<number | null>(null); // track single pointer
   const [displayScore, setDisplayScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [started, setStarted] = useState(false);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard());
   const [bestScore, setBestScore] = useState(0);
-
-  // ── Load leaderboard from localStorage on mount ──
-  useEffect(() => {
-    setLeaderboard(loadLeaderboard());
-  }, []);
 
   // Pre-rendered crowd strip (avoids hundreds of fillRect per frame)
   const crowdCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -535,10 +531,9 @@ export default function F1Game() {
     s.scrollOffset += s.speed * dt;
 
     // ── Move barriers left ──
-    for (const b of s.barriers) {
-      b.x -= s.speed * dt;
-    }
-    s.barriers = s.barriers.filter((b) => b.x + BARRIER_W > -10);
+    s.barriers = s.barriers
+      .map((b) => ({ ...b, x: b.x - s.speed * dt }))
+      .filter((b) => b.x + BARRIER_W > -10);
 
     // ── Spawn barriers from right ──
     const rightmost = s.barriers.length > 0
@@ -579,12 +574,9 @@ export default function F1Game() {
         color: isSpark ? "#FFD700" : Math.random() < 0.5 ? "#ff6600" : "#E8002D",
       });
     }
-    for (const p of s.particles) {
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.life -= dt;
-    }
-    s.particles = s.particles.filter((p) => p.life > 0);
+    s.particles = s.particles
+      .map((p) => ({ ...p, x: p.x + p.vx * dt, y: p.y + p.vy * dt, life: p.life - dt }))
+      .filter((p) => p.life > 0);
 
     // ── Collision: top/bottom walls ──
     if (s.carY - CAR_H / 2 < playTop || s.carY + CAR_H / 2 > playBot) {
@@ -599,18 +591,22 @@ export default function F1Game() {
     const carTop = s.carY - CAR_H / 2;
     const carBot = s.carY + CAR_H / 2;
 
-    for (const b of s.barriers) {
+    let collided = false;
+    s.barriers = s.barriers.map((b) => {
       if (carRight > b.x && carLeft < b.x + BARRIER_W) {
-        // Car overlaps barrier X range, check if outside gap
         if (carTop < b.gapY || carBot > b.gapY + b.gapH) {
-          s.shakeUntil = performance.now() + SHAKE_MS;
-          endGameRef.current();
-          return;
+          collided = true;
         }
       }
       if (!b.scored && b.x + BARRIER_W < carLeft) {
-        b.scored = true;
+        return { ...b, scored: true };
       }
+      return b;
+    });
+    if (collided) {
+      s.shakeUntil = performance.now() + SHAKE_MS;
+      endGameRef.current();
+      return;
     }
 
     // ── Render ──
@@ -627,8 +623,9 @@ export default function F1Game() {
     ctx.restore();
 
     setDisplayScore(s.score);
-    animRef.current = requestAnimationFrame(gameLoop);
+    animRef.current = requestAnimationFrame(gameLoopRef.current);
   }, [renderFrame]);
+  useEffect(() => { gameLoopRef.current = gameLoop; });
 
   // ── End game ──
   const endGame = useCallback(() => {
@@ -708,8 +705,8 @@ export default function F1Game() {
     setStarted(true);
 
     cancelAnimationFrame(animRef.current);
-    animRef.current = requestAnimationFrame(gameLoop);
-  }, [gameLoop]);
+    animRef.current = requestAnimationFrame(gameLoopRef.current);
+  }, []);
 
   // ── Keyboard input ──
   useEffect(() => {

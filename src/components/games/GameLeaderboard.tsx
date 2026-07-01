@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 
 interface LeaderboardEntry {
   name: string;
@@ -65,16 +65,14 @@ export default function GameLeaderboard({
   refreshKey = 0,
   defaultCollapsed = false,
 }: GameLeaderboardProps) {
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [prevRefreshKey, setPrevRefreshKey] = useState(refreshKey);
+  const [entries, setEntries] = useState<LeaderboardEntry[]>(() => loadEntries(gameSlug));
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
-  const refresh = useCallback(() => {
+  if (prevRefreshKey !== refreshKey) {
+    setPrevRefreshKey(refreshKey);
     setEntries(loadEntries(gameSlug));
-  }, [gameSlug]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh, refreshKey]);
+  }
 
   const rankColor = (rank: number): string => {
     if (rank === 1) return "text-gold";
