@@ -1,0 +1,21 @@
+{
+  "experiment_id": 1,
+  "hypothesis": "Scaffold retro games portal with Next.js 16, Tailwind v4 retro theme, and game card grid",
+  "category": "EXPLORE",
+  "verdict": "keep",
+  "score_before": 0.0,
+  "score_after": 0.0,
+  "score_delta": 0.0,
+  "dimensions_changed": {},
+  "ceo_rationale": "Greenfield project, no eval baseline. Force verdict based on QA: build pass, lint pass, TypeScript clean, 14/14 feature tests pass, plan completion 9/9.",
+  "learned": "Tailwind v4 CSS-first @theme directive cleanly separates design tokens from component code; Press Start 2P is the standard pixel font for retro portal headings.",
+  "anti_patterns": [
+    "Don't over-engineer for 3 games — static data file is sufficient, no database needed",
+    "Don't use Tailwind v3 config patterns — v4 uses @import 'tailwindcss' and @theme, not tailwind.config.ts",
+    "Don't add image assets in v1 — colored placeholder thumbnails with emojis work for initial portal"
+  ],
+  "playbook_proposals": [],
+  "issue": null,
+  "pr": 2,
+  "date": "2026-07-01"
+}

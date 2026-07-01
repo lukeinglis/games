@@ -12,6 +12,7 @@
   --color-puzzle-purple: #AA00FF;
   --color-sports-blue: #2979FF;
   --color-hot-pink: #FF4081;
+  --color-orange: #FF8C00;
 
   --font-heading: var(--font-press-start);
   --font-body: var(--font-source-sans);
@@ -26,6 +27,21 @@ body {
 @keyframes scanline {
   0% { transform: translateY(-100%); }
   100% { transform: translateY(100%); }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 .scanline-overlay {
@@ -54,4 +70,43 @@ body {
 
 .glow-green {
   box-shadow: 0 0 15px rgba(0, 230, 118, 0.4), 0 0 30px rgba(0, 230, 118, 0.1);
+}
+
+.animate-marquee {
+  animation: marquee 20s linear infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+.hero-banner {
+  background:
+    linear-gradient(135deg, #1a0a2e 0%, #0A1628 30%, #132240 60%, #1a0a2e 100%);
+  border-bottom: 3px solid var(--color-gold);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 60px,
+    rgba(255, 215, 0, 0.03) 60px,
+    rgba(255, 215, 0, 0.03) 61px
+  );
+}
+
+.ticker-tape {
+  background: linear-gradient(90deg, var(--color-gold), var(--color-orange), var(--color-gold));
+  overflow: hidden;
+  white-space: nowrap;
 }

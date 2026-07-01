@@ -1,0 +1,39 @@
+{
+  "goal": "",
+  "scope": [],
+  "guards": [],
+  "eval_command": "",
+  "eval_threshold": 0.0,
+  "constraints": [
+    "Git commits: always use `-s` (sign-off)",
+    "Git commits: never mention Claude or AI",
+    "No emdashes or double-dashes in content text"
+  ],
+  "hypothesis_budget": {
+    "min_growth": 2,
+    "max_new": 2
+  },
+  "target_branch": "main",
+  "smoke_test": "",
+  "project_eval": [],
+  "eval_weights": {
+    "hygiene": 0.5,
+    "growth": 0.5,
+    "project": 0.0
+  },
+  "research_target": null,
+  "inner_loop": null,
+  "outer_loop": null,
+  "mutable_surfaces": [],
+  "fixed_surfaces": [],
+  "research_constraints": [],
+  "cost_budget": null,
+  "hard_constraints": [],
+  "eval_spec": [],
+  "hygiene_weights": null,
+  "growth_weights": null,
+  "clean_pr": false,
+  "clean_pr_include": [],
+  "clean_pr_exclude": [],
+  "test_timeout": 600
+}

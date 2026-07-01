@@ -17,16 +17,9 @@ const sourceSans = Source_Sans_3({
 });
 
 export const metadata: Metadata = {
-  title: "Games Portal",
-  description:
-    "A retro games portal linking to sports fantasy and prediction games.",
+  title: "Luke's Arcade",
+  description: "Mini games, sports challenges, and more.",
 };
-
-const siteLinks = [
-  { label: "World Cup Fantasy", href: "https://worldcup.lukeinglis.me" },
-  { label: "F1 Fantasy", href: "https://f1.lukeinglis.com" },
-  { label: "Football Fantasy", href: "https://football.lukeinglis.com" },
-];
 
 export default function RootLayout({
   children,
@@ -39,42 +32,43 @@ export default function RootLayout({
       className={`${pressStart.variable} ${sourceSans.variable} h-full`}
     >
       <body className="min-h-full flex flex-col">
-        <header className="relative bg-gradient-to-r from-navy via-navy-lighter to-navy border-b-4 border-gold">
-          <div className="max-w-6xl mx-auto px-4 py-5 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3">
-              <span className="text-2xl">🕹️</span>
-              <span className="font-heading text-sm sm:text-base text-gold tracking-wide">
-                GAMES PORTAL
-              </span>
+        <header className="hero-banner">
+          <div className="relative z-10 max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-3 group">
+              <span className="text-3xl sm:text-4xl group-hover:scale-110 transition-transform">🕹️</span>
+              <div className="flex flex-col">
+                <span className="font-heading text-base sm:text-lg text-gold tracking-wider drop-shadow-[0_0_10px_rgba(255,215,0,0.5)]">
+                  LUKE&apos;S ARCADE
+                </span>
+                <span className="text-[10px] text-gold/50 tracking-widest uppercase">
+                  est. 2025
+                </span>
+              </div>
             </Link>
-            <span className="hidden sm:inline font-heading text-[8px] text-gray-500 uppercase">
-              Play. Predict. Win.
-            </span>
+            <nav className="hidden sm:flex items-center gap-4">
+              <Link href="/" className="text-xs text-gray-400 hover:text-gold transition-colors font-heading uppercase">
+                Home
+              </Link>
+            </nav>
           </div>
         </header>
 
+        <div className="ticker-tape py-1">
+          <div className="animate-marquee inline-block">
+            <span className="font-heading text-[8px] text-navy font-bold tracking-wider">
+              &nbsp;&nbsp;🔥 NEW: F1 Racer &nbsp;&nbsp;⚽ Penalty Kick &nbsp;&nbsp;🏈 Breakaway &nbsp;&nbsp;🏴 Guess the Flag &nbsp;&nbsp;🏈 Field Goal Frenzy &nbsp;&nbsp;🏎️ F1 Racer &nbsp;&nbsp;
+              🔥 NEW: F1 Racer &nbsp;&nbsp;⚽ Penalty Kick &nbsp;&nbsp;🏈 Breakaway &nbsp;&nbsp;🏴 Guess the Flag &nbsp;&nbsp;🏈 Field Goal Frenzy &nbsp;&nbsp;🏎️ F1 Racer &nbsp;&nbsp;
+            </span>
+          </div>
+        </div>
+
         <main className="flex-1">{children}</main>
 
-        <footer className="border-t-2 border-navy-lighter bg-navy-light">
-          <div className="max-w-6xl mx-auto px-4 py-8">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <span className="font-heading text-[8px] text-gray-500">
-                GAMES PORTAL
-              </span>
-              <nav className="flex flex-wrap gap-4">
-                {siteLinks.map((link) => (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-gray-400 hover:text-gold transition-colors"
-                  >
-                    {link.label}
-                  </a>
-                ))}
-              </nav>
-            </div>
+        <footer className="border-t border-navy-lighter bg-navy-light/50 mt-12">
+          <div className="max-w-6xl mx-auto px-4 py-6 text-center">
+            <p className="text-xs text-gray-600">
+              Made for fun by Luke Inglis
+            </p>
           </div>
         </footer>
       </body>

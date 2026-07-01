@@ -1,0 +1,10 @@
+- Scaffold a retro games portal (games.lukeinglis.me) inspired by AddictingGames and Miniclip circa 2005. Use Next.js 16 App Router with TypeScript and Tailwind CSS v4. The portal aggregates mini-games from sports sites: F1 Fantasy (f1.lukeinglis.com), World Cup 2026 Fantasy (worldcup.lukeinglis.me), Football Fantasy (football.lukeinglis.com). Dark background, bold saturated colors, game card grid with thumbnails and ratings, categories, featured section, retro pixel-art accents, playful typography. Mobile-first responsive. Initialize with npx create-next-app (use --yes flags), build the full homepage with game cards, category nav, and game entries linking to external sites. Make it feel nostalgic but polished.
+- Migrate 5 mini-games from other repos into this portal and make them playable at their own routes. Each game is a self-contained canvas-based client component. Copy the game components, adapt imports, add route pages, and update the homepage game cards to link to local routes instead of external URLs.
+- Copy all 5 game components + leaderboard into src/components/games/
+- Remove any imports that depend on the source repo (auth providers, etc) - make games work standalone
+- Create route pages: /games/penalty-kick, /games/guess-the-flag, /games/breakaway, /games/field-goal, /games/f1-racer
+- Each route page wraps the game component with the portal retro styling, a back button, and the game title
+- Update src/data/games.ts to have all 5 games with href pointing to internal routes instead of external URLs
+- Update categories to include all game types (Sports, Racing, Trivia, etc)
+- Add a simple localStorage-based leaderboard (no API needed for now)
+- Ensure npm run build passes cleanly

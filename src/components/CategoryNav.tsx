@@ -5,6 +5,15 @@ import { categories, type GameCategory } from "@/data/games";
 
 type Filter = "All" | GameCategory;
 
+const filterEmojis: Record<string, string> = {
+  All: "🎮",
+  Sports: "🏟️",
+  Racing: "🏁",
+  Trivia: "🧠",
+  Prediction: "🔮",
+  Fantasy: "⭐",
+};
+
 export function CategoryNav({
   onFilter,
 }: {
@@ -20,22 +29,23 @@ export function CategoryNav({
   }
 
   return (
-    <nav className="flex flex-wrap gap-2">
+    <nav className="flex flex-wrap gap-1.5">
       {filters.map((filter) => (
         <button
           key={filter}
           onClick={() => handleClick(filter)}
           className={`
-            rounded-full px-4 py-2 text-xs font-heading uppercase tracking-wider
-            border-2 transition-all duration-150
+            flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-[10px] font-heading uppercase tracking-wider
+            transition-all duration-150 border
             ${
               active === filter
-                ? "border-gold bg-gold text-navy"
-                : "border-navy-lighter bg-navy-light text-gray-300 hover:border-gold hover:text-gold"
+                ? "border-gold bg-gold/15 text-gold"
+                : "border-transparent bg-navy-light text-gray-500 hover:text-gray-300 hover:bg-navy-lighter"
             }
           `}
         >
-          {filter === "All" ? "All Games" : filter}
+          <span className="text-sm">{filterEmojis[filter] ?? "🎮"}</span>
+          {filter === "All" ? "All" : filter}
         </button>
       ))}
     </nav>

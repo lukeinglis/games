@@ -1,0 +1,1 @@
+Scaffold retro games portal with Next.js 16, Tailwind v4 retro theme, and game card grid

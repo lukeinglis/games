@@ -1,0 +1,35 @@
+{
+  "project_type": "nextjs_app",
+  "dimensions": [
+    {
+      "name": "build",
+      "command": "npm run build",
+      "weight": 0.5,
+      "parser": "exit_code",
+      "regex_pattern": null,
+      "description": "Next.js production build succeeds without errors",
+      "source": "manual"
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "weight": 0.3,
+      "parser": "exit_code",
+      "regex_pattern": null,
+      "description": "ESLint passes with no errors",
+      "source": "manual"
+    },
+    {
+      "name": "type_check",
+      "command": "npx tsc --noEmit",
+      "weight": 0.2,
+      "parser": "exit_code",
+      "regex_pattern": null,
+      "description": "TypeScript type checking passes",
+      "source": "manual"
+    }
+  ],
+  "tier": "manual",
+  "confidence": 0.8,
+  "human_reviewed": true
+}

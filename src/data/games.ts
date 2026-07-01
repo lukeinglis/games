@@ -1,25 +1,84 @@
-export type GameCategory = "Prediction" | "Fantasy" | "Sports" | "Racing" | "Trivia";
+export type GameCategory = "Sports" | "Racing" | "Trivia" | "Prediction" | "Fantasy";
 
 export interface Game {
   slug: string;
   title: string;
+  tagline: string;
   description: string;
   category: GameCategory;
-  thumbnailColor: string;
+  color: string;
   emoji: string;
   url: string;
   featured: boolean;
   external?: boolean;
+  hot?: boolean;
 }
 
 export const games: Game[] = [
   {
+    slug: "breakaway",
+    title: "Breakaway",
+    tagline: "Endless runner",
+    description: "Dodge tacklers and sprint for the end zone. Swipe or arrow keys to survive.",
+    category: "Sports",
+    color: "#DD550C",
+    emoji: "🏈",
+    url: "/games/breakaway",
+    featured: true,
+    hot: true,
+  },
+  {
+    slug: "f1-racer",
+    title: "F1 Racer",
+    tagline: "Flappy-style",
+    description: "Hold to fly, release to fall. Weave through team-colored barriers across Grand Prix circuits.",
+    category: "Racing",
+    color: "#E8002D",
+    emoji: "🏎️",
+    url: "/games/f1-racer",
+    featured: true,
+    hot: true,
+  },
+  {
+    slug: "penalty-kick",
+    title: "Penalty Kick",
+    tagline: "Beat the keeper",
+    description: "Pick your spot and fire. How long can you keep your scoring streak alive?",
+    category: "Sports",
+    color: "#1B5E20",
+    emoji: "⚽",
+    url: "/games/penalty-kick",
+    featured: true,
+  },
+  {
+    slug: "field-goal",
+    title: "Field Goal Frenzy",
+    tagline: "Power + aim",
+    description: "Nail the power meter and aim to kick field goals from increasing distances. Three misses and you are done.",
+    category: "Sports",
+    color: "#FF8000",
+    emoji: "🏈",
+    url: "/games/field-goal",
+    featured: true,
+  },
+  {
+    slug: "guess-the-flag",
+    title: "Guess the Flag",
+    tagline: "Flag quiz",
+    description: "Name the country from its flag before the clock runs out. One wrong answer ends it.",
+    category: "Trivia",
+    color: "#AA00FF",
+    emoji: "🏴",
+    url: "/games/guess-the-flag",
+    featured: true,
+  },
+  {
     slug: "world-cup-2026",
     title: "World Cup 2026 Fantasy",
-    description:
-      "Predict group standings, pick knockout brackets, and compete with friends for World Cup glory.",
+    tagline: "Predict the bracket",
+    description: "Predict group standings, pick knockout brackets, and compete with friends.",
     category: "Prediction",
-    thumbnailColor: "#1B5E20",
+    color: "#1B5E20",
     emoji: "⚽",
     url: "https://worldcup.lukeinglis.me",
     featured: false,
@@ -28,69 +87,14 @@ export const games: Game[] = [
   {
     slug: "f1-fantasy",
     title: "F1 Fantasy",
-    description:
-      "Build your dream racing team, predict race results, and chase the championship.",
+    tagline: "Build your team",
+    description: "Build your dream racing team, predict results, and chase the championship.",
     category: "Fantasy",
-    thumbnailColor: "#FF1744",
+    color: "#FF1744",
     emoji: "🏎️",
     url: "https://f1.lukeinglis.me",
     featured: false,
     external: true,
-  },
-  {
-    slug: "penalty-kick",
-    title: "Penalty Kick",
-    description:
-      "Pick your spot and beat the keeper. How long can you keep your scoring streak alive?",
-    category: "Sports",
-    thumbnailColor: "#1B5E20",
-    emoji: "⚽",
-    url: "/games/penalty-kick",
-    featured: true,
-  },
-  {
-    slug: "guess-the-flag",
-    title: "Guess the Flag",
-    description:
-      "Identify World Cup 2026 team flags before time runs out. One wrong answer and it is game over.",
-    category: "Trivia",
-    thumbnailColor: "#AA00FF",
-    emoji: "🏴",
-    url: "/games/guess-the-flag",
-    featured: true,
-  },
-  {
-    slug: "breakaway",
-    title: "Breakaway",
-    description:
-      "Dodge tacklers and sprint for the end zone in this endless runner. Swipe or use arrow keys to survive.",
-    category: "Sports",
-    thumbnailColor: "#DD550C",
-    emoji: "🏈",
-    url: "/games/breakaway",
-    featured: true,
-  },
-  {
-    slug: "field-goal",
-    title: "Field Goal Frenzy",
-    description:
-      "Nail the power and aim to kick field goals from increasing distances. Three misses and you are out.",
-    category: "Sports",
-    thumbnailColor: "#FF8000",
-    emoji: "🏈",
-    url: "/games/field-goal",
-    featured: true,
-  },
-  {
-    slug: "f1-racer",
-    title: "F1 Racer",
-    description:
-      "Hold to fly, release to fall. Weave through team-colored barriers in this F1 dodge challenge.",
-    category: "Racing",
-    thumbnailColor: "#E8002D",
-    emoji: "🏎️",
-    url: "/games/f1-racer",
-    featured: true,
   },
 ];
 

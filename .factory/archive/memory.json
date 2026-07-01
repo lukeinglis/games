@@ -1,0 +1,32 @@
+[
+  {
+    "type": "pattern",
+    "text": "Next.js 16 with Tailwind v4 CSS-first @theme directive cleanly separates design tokens from component code, avoiding config bloat",
+    "evidence": [1],
+    "date": "2026-07-01"
+  },
+  {
+    "type": "pattern",
+    "text": "Press Start 2P pixel font via @import from Google Fonts is the standard choice for retro gaming portals; avoids custom font files",
+    "evidence": [1],
+    "date": "2026-07-01"
+  },
+  {
+    "type": "pattern",
+    "text": "localStorage-only leaderboards eliminate infrastructure cost for friends-league games; inlining static data removes source-repo coupling",
+    "evidence": [2],
+    "date": "2026-07-01"
+  },
+  {
+    "type": "pattern",
+    "text": "Stripping auth/API dependencies at intake (OAuth, NextAuth, anti-cheat tokens) enables clean game migration across repos",
+    "evidence": [2],
+    "date": "2026-07-01"
+  },
+  {
+    "type": "pattern",
+    "text": "Canvas games preserve game loop logic cleanly; only strip auth/API calls and external state dependencies",
+    "evidence": [2],
+    "date": "2026-07-01"
+  }
+]

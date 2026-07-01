@@ -1,0 +1,207 @@
+{
+  "project_name": "run-d360a854",
+  "generated_at": "2026-07-01 17:23:56.263107",
+  "total_experiments": 4,
+  "keep_count": 2,
+  "revert_count": 2,
+  "error_count": 0,
+  "keep_rate": 0.5,
+  "latest_score": null,
+  "agent_verdicts": [
+    {
+      "role": "build",
+      "verdict": "PROCEED",
+      "rationale": "PR #2 matches hypothesis H1 exactly. All planned elements implemented:",
+      "issues": [
+        "None. Implementation is clean, well-scoped, no scope creep. CLAUDE.md constraints respected (no emdashes, sign-off commits).",
+        "**Instructions for next step:** QA Agent should verify: build passes, lint clean, components render correctly, mobile responsiveness, no broken links, no Tailwind v3 patterns leaked in."
+      ],
+      "experiment_id": null
+    },
+    {
+      "role": "qa-exp2-final",
+      "verdict": "PROCEED",
+      "rationale": "All blocking issues resolved. Build passes with 9/9 routes. Lint: 0 errors, 3 warnings (underscore-prefixed unused vars, acceptable). All 5 games functional at their routes. All acceptance criteria from strategy H1 are met:",
+      "issues": [
+        "None remaining.",
+        "**Decision:** KEEP experiment #2."
+      ],
+      "experiment_id": null
+    },
+    {
+      "role": "qa-exp2",
+      "verdict": "REDIRECT",
+      "rationale": "Build passes, all 5 games functional, all routes return 200, external links preserved. However, 6 lint errors (4 unused variables, 2 setState-in-effect patterns) need fixing. These are straightforward cleanup items. The focus directive requires \"npm run build passes cleanly\" \u2014 while build passes, lint failures should be cleaned up for quality.",
+      "issues": [
+        "1. 4 unused variables in BreakawayGame.tsx and FieldGoalGame.tsx",
+        "2. setState in useEffect across 4 files (should use lazy initializer)",
+        "3. F1Game.tsx gameLoop immutability violation",
+        "**Instructions for Builder:** Fix the 6 lint errors identified by QA. Focus on: (1) prefix unused vars with underscore or remove them, (2) fix setState-in-effect patterns, (3) fix F1Game gameLoop pattern. Then run npm run lint to verify clean."
+      ],
+      "experiment_id": null
+    },
+    {
+      "role": "qa",
+      "verdict": "PROCEED",
+      "rationale": "QA report is CLEAN across all 3 required sections:",
+      "issues": [
+        "None.",
+        "**Instructions for next step:** Proceed to precheck gate and finalize with KEEP verdict."
+      ],
+      "experiment_id": null
+    },
+    {
+      "role": "research-observe",
+      "verdict": "PROCEED",
+      "rationale": "Both researchers returned thorough, actionable reports. Portal structure is well-documented (3 existing game cards, external linking, retro styling, Tailwind v4 theme). Source game analysis correctly identified all external dependencies per component \u2014 auth providers (NextAuth, Yahoo OAuth), API routes, and data dependencies (teams data for GuessTheFlag).",
+      "issues": [
+        "None. Reports are comprehensive and accurate.",
+        "**Key decisions for Strategist:**",
+        "1. All 5 games + leaderboard must be migrated as standalone client components",
+        "2. Strip all auth/API dependencies \u2014 use localStorage-only leaderboard per focus directive",
+        "3. GuessTheFlag needs teams data inlined (extract from WorldCupFantasy)",
+        "4. GameLeaderboard must be rewritten to use localStorage instead of API calls",
+        "5. New categories needed: Sports, Racing, Trivia (beyond current Prediction/Fantasy)",
+        "6. Game data model needs `href` field for internal routes (currently only has `url` for external links)",
+        "**Instructions for next step:** Strategist should produce exactly ONE hypothesis covering all 5 game migrations as a single coordinated change."
+      ],
+      "experiment_id": null
+    },
+    {
+      "role": "research",
+      "verdict": "PROCEED",
+      "rationale": "Research covers all key areas: Next.js 16 App Router patterns, Tailwind CSS v4 setup (CSS-first config, @theme directive), retro design DNA (dark backgrounds, pixel fonts, bold gradients, game card grids), mobile-first responsive grids, and the user's three existing sports sites as game inventory. Actionable findings ranked by impact with code examples. No calendar-time estimates.",
+      "issues": [
+        "None significant. The research correctly identifies Press Start 2P as the pixel font choice and the Tailwind v4 CSS-first configuration approach. The existing site analysis from CLAUDE.md provides enough context for game data modeling.",
+        "**Instructions for next step:** Strategist should synthesize this into exactly ONE hypothesis (single-item mode) targeting capability_surface growth. The hypothesis must cover the full scaffold: Next.js 16 init, Tailwind v4 theme, game data model, game card grid, category nav, featured section, retro styling. One PR, one experiment."
+      ],
+      "experiment_id": null
+    },
+    {
+      "role": "strategy-h1",
+      "verdict": "PROCEED",
+      "rationale": "Single hypothesis as required by targeted mode. Growth dimension explicitly tagged (capability_surface). Plan is comprehensive \u2014 covers all 5 games, leaderboard rewrite, route pages, data model expansion, and build verification. Anti-patterns section correctly identifies the key pitfalls (partial migration, unnecessary API routes, missing teams data). Two deferred backlog items are reasonable future work.",
+      "issues": [
+        "None.",
+        "**PLAN APPROVED** \u2014 Builder may proceed with H1.",
+        "**Instructions for Builder:** Follow the 7-step plan exactly. Key attention areas: (1) inline teams data for GuessTheFlag, (2) strip all auth/API calls from BreakawayGame/FieldGoalGame/F1Game, (3) rewrite GameLeaderboard to use localStorage, (4) ensure all route pages match portal retro styling."
+      ],
+      "experiment_id": null
+    },
+    {
+      "role": "strategy",
+      "verdict": "PROCEED",
+      "rationale": "Single hypothesis as required by targeted mode. H1 covers the full scaffold scope: Next.js 16 init, Tailwind v4 retro theme (CSS-first @theme), game data model with 3 entries, GameCard component, responsive grid, category nav, featured section, and retro styling. Correctly tagged with `**Growth dimension:** capability_surface`. Anti-patterns are well-chosen (no over-engineering, no Tailwind v3 patterns, no image assets in v1). Scoped to one PR. Expected impact is realistic.",
+      "issues": [
+        "None. Hypothesis is specific enough for the Builder to execute without ambiguity.",
+        "**Instructions for next step:** PLAN APPROVED. Builder should execute H1 as written. Key implementation notes: use `npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --yes`, configure Tailwind v4 with CSS-first @theme in globals.css, load Press Start 2P via next/font/google, build all components in src/components/, game data in src/data/games.ts. Verify `npm run build` passes before opening PR.",
+        "## PLAN APPROVED",
+        "### Approved Hypotheses (in priority order):",
+        "1. **H1:** Scaffold retro games portal with Next.js 16, Tailwind v4 retro theme, and game card grid \u2014 **capability_surface** growth"
+      ],
+      "experiment_id": null
+    }
+  ],
+  "observations": [
+    {
+      "source": "observations.md",
+      "content": "# Interaction Study \u2014: Analyzed 1 conversation log(s), 0 relevant messages.",
+      "timestamp": "2026-07-01 17:23:56.262439",
+      "project": "run-d360a854",
+      "tags": [
+        "observation"
+      ]
+    },
+    {
+      "source": "observations.md",
+      "content": "Similar Projects: No similar projects found.",
+      "timestamp": "2026-07-01 17:23:56.262446",
+      "project": "run-d360a854",
+      "tags": [
+        "observation"
+      ]
+    },
+    {
+      "source": "observations.md",
+      "content": "SPEC.md: SPEC.md auto-generated at .factory/SPEC.md. The Strategist SHOULD use SPEC.md Diff for plan traceability.\n\n**Spec summary:**\n  Status: Auto-generated by re:factory discovery\n  ## Normative Language\n  The key words MUST, MUST NOT, REQUIRED, SHOULD, SHOULD NOT, RECOMMENDED, MAY, and OPTIONAL in this document are to be interpreted as described in RFC 2119.\n  ## 1. Project Identity\n  - **Name:** games",
+      "timestamp": "2026-07-01 17:23:56.262449",
+      "project": "run-d360a854",
+      "tags": [
+        "observation"
+      ]
+    },
+    {
+      "source": "observations.md",
+      "content": "Open GitHub Issues: No open issues found (or not a GitHub repo).",
+      "timestamp": "2026-07-01 17:23:56.262451",
+      "project": "run-d360a854",
+      "tags": [
+        "observation"
+      ]
+    },
+    {
+      "source": "observations.md",
+      "content": "Backlog: **10 items** in the backlog. Clear as many as possible this cycle.\n\n- Scaffold a retro games portal (games.lukeinglis.me) inspired by AddictingGames and Miniclip circa 2005. Use Next.js 16 App Router with TypeScript and Tailwind CSS v4. The portal aggregates mini-games from sports sites: F1 Fantasy (f1.lukeinglis.com), World Cup 2026 Fantasy (worldcup.lukeinglis.me), Football Fantasy (football.lukeinglis.com). Dark background, bold saturated colors, game card grid with thumbnails and ratings, ca",
+      "timestamp": "2026-07-01 17:23:56.262455",
+      "project": "run-d360a854",
+      "tags": [
+        "observation"
+      ]
+    },
+    {
+      "source": "observations.md",
+      "content": "Observability Coverage: - **Score:** 0.0%\n- **Function coverage:** 0/0 functions have logging (0%)\n- **Total log statements:** 0\n- **Structured logging:** No\n- **Request tracing:** No\n\n### Observability Recommendations\n- Add structured logging (structlog for Python, pino for Node.js) for machine-parseable log output\n- Add request ID tracing (contextvars + unique ID per request) for end-to-end request correlation\n- Improve logging coverage: only 0/0 functions (0%) have log statements",
+      "timestamp": "2026-07-01 17:23:56.262457",
+      "project": "run-d360a854",
+      "tags": [
+        "observation"
+      ]
+    },
+    {
+      "source": "observations.md",
+      "content": "Prior Knowledge (Obsidian): No prior notes found.",
+      "timestamp": "2026-07-01 17:23:56.262459",
+      "project": "run-d360a854",
+      "tags": [
+        "observation"
+      ]
+    },
+    {
+      "source": "observations.md",
+      "content": "Hypothesis Budget: **Backlog items: 10** (clear as many as possible this cycle)\n**New items: at most 2** (researcher/strategist may add new ideas)\n**Growth minimum: 2** (at least 2 hypotheses must target growth dimensions)\n\n### Rules\n\n- Read the backlog first. Pick items to implement this cycle \u2014 no cap on clearing.\n- You may add at most 2 NEW items that aren't already in the backlog.\n- At least 2 hypotheses must target growth dimensions (capability_surface, factory_effectiveness, research_grounding, experiment_di",
+      "timestamp": "2026-07-01 17:23:56.262463",
+      "project": "run-d360a854",
+      "tags": [
+        "observation"
+      ]
+    },
+    {
+      "source": ".factory/archive/experiments/001.json",
+      "content": "Tailwind v4 CSS-first @theme directive cleanly separates design tokens from component code; Press Start 2P is the standard pixel font for retro portal headings.",
+      "timestamp": "2026-07-01 17:23:56.262789",
+      "project": "run-d360a854",
+      "tags": [
+        "archive"
+      ]
+    },
+    {
+      "source": ".factory/archive/experiments/002.json",
+      "content": "Canvas games migrate cleanly by preserving game loop logic and stripping auth/API calls; localStorage is sufficient for single-site leaderboards; inlined data deps beat shared modules for single consumers.",
+      "timestamp": "2026-07-01 17:23:56.262850",
+      "project": "run-d360a854",
+      "tags": [
+        "archive"
+      ]
+    }
+  ],
+  "verdict_patterns": {
+    "build:PROCEED": 1,
+    "qa-exp2-final:PROCEED": 1,
+    "qa-exp2:REDIRECT": 1,
+    "qa:PROCEED": 1,
+    "research-observe:PROCEED": 1,
+    "research:PROCEED": 1,
+    "strategy-h1:PROCEED": 1,
+    "strategy:PROCEED": 1
+  }
+}

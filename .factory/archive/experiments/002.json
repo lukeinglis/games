@@ -1,0 +1,41 @@
+{
+  "experiment_id": 2,
+  "hypothesis": "Migrate 5 mini-games from source repos into portal with localStorage leaderboards",
+  "category": "FEATURE",
+  "verdict": "keep",
+  "score_before": 0.40,
+  "score_after": 0.65,
+  "score_delta": 0.25,
+  "dimensions_changed": {
+    "feature_completeness": [0.4, 0.65],
+    "migration_quality": [0.0, 0.95]
+  },
+  "ceo_rationale": "5 games successfully migrated with zero regressions. localStorage leaderboard works well for small-audience portal. Build and lint pass on first attempt; 2 QA iterations for polish.",
+  "learned": "Canvas games migrate cleanly by preserving game loop logic and stripping auth/API calls; localStorage is sufficient for single-site leaderboards; inlined data deps beat shared modules for single consumers.",
+  "anti_patterns": [
+    "Do not create shared data modules for one-off dependencies (e.g., teams array used by single game); inline instead for clarity"
+  ],
+  "playbook_proposals": [
+    {
+      "role": "builder",
+      "type": "DO",
+      "content": "When migrating Canvas games, preserve game loop logic intact; strip auth/API calls but keep core game mechanics",
+      "confidence": "high"
+    },
+    {
+      "role": "builder",
+      "type": "DO",
+      "content": "Use localStorage for leaderboards in small-audience portals; no sync or cross-device state needed for friends leagues",
+      "confidence": "high"
+    },
+    {
+      "role": "builder",
+      "type": "DO",
+      "content": "Inline data dependencies when single consumer exists; defer shared data modules until second consumer surfaces",
+      "confidence": "medium"
+    }
+  ],
+  "issue": null,
+  "pr": 4,
+  "date": "2026-07-01"
+}
