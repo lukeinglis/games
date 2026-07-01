@@ -38,18 +38,6 @@ export const games: Game[] = [
     external: true,
   },
   {
-    slug: "football-fantasy",
-    title: "Football Fantasy",
-    description:
-      "Draft players, set lineups, and battle your mates in the ultimate football fantasy league.",
-    category: "Fantasy",
-    thumbnailColor: "#2979FF",
-    emoji: "🏈",
-    url: "https://football.lukeinglis.me",
-    featured: false,
-    external: true,
-  },
-  {
     slug: "penalty-kick",
     title: "Penalty Kick",
     description:
