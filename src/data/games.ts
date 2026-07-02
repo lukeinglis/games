@@ -8,6 +8,7 @@ export interface Game {
   category: GameCategory;
   color: string;
   emoji: string;
+  thumbnail?: string;
   url: string;
   featured: boolean;
   external?: boolean;
@@ -23,6 +24,7 @@ export const games: Game[] = [
     category: "Sports",
     color: "#DD550C",
     emoji: "🏈",
+    thumbnail: "/thumbnails/breakaway.png",
     url: "/games/breakaway",
     featured: true,
     hot: true,
@@ -35,6 +37,7 @@ export const games: Game[] = [
     category: "Racing",
     color: "#E8002D",
     emoji: "🏎️",
+    thumbnail: "/thumbnails/f1-racer.png",
     url: "/games/f1-racer",
     featured: true,
     hot: true,
@@ -47,6 +50,7 @@ export const games: Game[] = [
     category: "Sports",
     color: "#1B5E20",
     emoji: "⚽",
+    thumbnail: "/thumbnails/penalty-kick.png",
     url: "/games/penalty-kick",
     featured: true,
   },
@@ -58,6 +62,7 @@ export const games: Game[] = [
     category: "Sports",
     color: "#FF8000",
     emoji: "🏈",
+    thumbnail: "/thumbnails/field-goal.png",
     url: "/games/field-goal",
     featured: true,
   },
@@ -69,6 +74,7 @@ export const games: Game[] = [
     category: "Trivia",
     color: "#AA00FF",
     emoji: "🏴",
+    thumbnail: "/thumbnails/guess-the-flag.png",
     url: "/games/guess-the-flag",
     featured: true,
   },

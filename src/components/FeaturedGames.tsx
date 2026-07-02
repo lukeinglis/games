@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { games } from "@/data/games";
 
@@ -23,14 +24,25 @@ export function FeaturedGames() {
           href={hero.url}
           className="lg:col-span-3 group relative rounded-lg overflow-hidden border border-navy-lighter hover:border-gold/60 transition-all"
         >
-          <div
-            className="h-48 sm:h-56 flex items-center justify-center relative"
-            style={{ background: `linear-gradient(135deg, ${hero.color}cc, ${hero.color}66, #0A1628)` }}
-          >
+          <div className="h-48 sm:h-56 relative overflow-hidden">
+            {hero.thumbnail ? (
+              <Image
+                src={hero.thumbnail}
+                alt={hero.title}
+                fill
+                className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                sizes="(max-width: 1024px) 100vw, 60vw"
+                priority
+              />
+            ) : (
+              <div
+                className="h-full flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${hero.color}cc, ${hero.color}66, #0A1628)` }}
+              >
+                <span className="text-7xl sm:text-8xl drop-shadow-lg">{hero.emoji}</span>
+              </div>
+            )}
             <div className="scanline-overlay" />
-            <span className="text-7xl sm:text-8xl drop-shadow-lg group-hover:scale-110 transition-transform duration-300 relative z-10">
-              {hero.emoji}
-            </span>
             {hero.hot && (
               <span className="absolute top-3 left-3 bg-action-red text-white text-[9px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider z-10">
                 HOT
@@ -52,15 +64,25 @@ export function FeaturedGames() {
               href={game.url}
               className="group relative rounded-lg overflow-hidden border border-navy-lighter hover:border-gold/60 transition-all"
             >
-              <div
-                className="h-28 sm:h-full min-h-[7rem] flex items-center justify-center relative"
-                style={{ background: `linear-gradient(135deg, ${game.color}aa, ${game.color}55, #0A1628)` }}
-              >
-                <span className="text-3xl sm:text-4xl drop-shadow-lg group-hover:scale-110 transition-transform duration-200">
-                  {game.emoji}
-                </span>
+              <div className="h-28 sm:h-full min-h-[7rem] relative overflow-hidden">
+                {game.thumbnail ? (
+                  <Image
+                    src={game.thumbnail}
+                    alt={game.title}
+                    fill
+                    className="object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                    sizes="(max-width: 1024px) 50vw, 20vw"
+                  />
+                ) : (
+                  <div
+                    className="h-full flex items-center justify-center"
+                    style={{ background: `linear-gradient(135deg, ${game.color}aa, ${game.color}55, #0A1628)` }}
+                  >
+                    <span className="text-3xl sm:text-4xl drop-shadow-lg">{game.emoji}</span>
+                  </div>
+                )}
                 {game.hot && (
-                  <span className="absolute top-2 right-2 bg-action-red text-white text-[8px] font-bold px-1.5 py-0.5 rounded-sm uppercase">
+                  <span className="absolute top-2 right-2 bg-action-red text-white text-[8px] font-bold px-1.5 py-0.5 rounded-sm uppercase z-10">
                     HOT
                   </span>
                 )}

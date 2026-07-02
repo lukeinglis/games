@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Game } from "@/data/games";
 
@@ -20,14 +21,26 @@ export function GameCard({ game }: { game: Game }) {
         </div>
       )}
 
-      <div
-        className="h-24 flex items-center justify-center text-4xl relative"
-        style={{ background: `linear-gradient(135deg, ${game.color}dd, ${game.color}88)` }}
-      >
-        <span className="drop-shadow-lg group-hover:scale-125 transition-transform duration-200">
-          {game.emoji}
-        </span>
-        <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-navy-light/80 to-transparent" />
+      <div className="h-28 relative overflow-hidden">
+        {game.thumbnail ? (
+          <Image
+            src={game.thumbnail}
+            alt={game.title}
+            fill
+            className="object-cover object-center group-hover:scale-105 transition-transform duration-300"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          />
+        ) : (
+          <div
+            className="h-full flex items-center justify-center text-4xl"
+            style={{ background: `linear-gradient(135deg, ${game.color}dd, ${game.color}88)` }}
+          >
+            <span className="drop-shadow-lg group-hover:scale-125 transition-transform duration-200">
+              {game.emoji}
+            </span>
+          </div>
+        )}
+        <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-navy-light to-transparent" />
       </div>
 
       <div className="p-3">
