@@ -58,7 +58,101 @@ interface BallState {
   aimX: number;
   windOffset: number;
   good: boolean;
+  isPerfect: boolean;
   resultReason: string;
+}
+
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: string;
+  size: number;
+  active: boolean;
+}
+
+const MAX_PARTICLES = 150;
+const BALL_TRAIL_LENGTH = 8;
+
+const CONFETTI_COLORS = ["#FFD700", "#DD550C", "#ffffff"];
+
+function createParticlePool(): Particle[] {
+  const pool: Particle[] = [];
+  for (let i = 0; i < MAX_PARTICLES; i++) {
+    pool.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0, color: "#fff", size: 2, active: false });
+  }
+  return pool;
+}
+
+function emitParticles(
+  pool: Particle[], count: number,
+  x: number, y: number,
+  opts: { speedMin: number; speedMax: number; lifeFrames: number; colors: string[]; sizeMin: number; sizeMax: number; gravity?: boolean },
+) {
+  let emitted = 0;
+  for (let i = 0; i < pool.length && emitted < count; i++) {
+    if (!pool[i].active) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = opts.speedMin + Math.random() * (opts.speedMax - opts.speedMin);
+      pool[i].x = x;
+      pool[i].y = y;
+      pool[i].vx = Math.cos(angle) * speed;
+      pool[i].vy = Math.sin(angle) * speed - (opts.gravity ? 2 : 0);
+      pool[i].life = opts.lifeFrames;
+      pool[i].maxLife = opts.lifeFrames;
+      pool[i].color = opts.colors[Math.floor(Math.random() * opts.colors.length)];
+      pool[i].size = opts.sizeMin + Math.random() * (opts.sizeMax - opts.sizeMin);
+      pool[i].active = true;
+      emitted++;
+    }
+  }
+}
+
+function updateParticles(pool: Particle[], applyGravity: boolean) {
+  for (let i = 0; i < pool.length; i++) {
+    const p = pool[i];
+    if (!p.active) continue;
+    p.x += p.vx;
+    p.y += p.vy;
+    if (applyGravity) p.vy += 0.1;
+    p.vx *= 0.99;
+    p.life--;
+    if (p.life <= 0) p.active = false;
+  }
+}
+
+function drawParticles(ctx: CanvasRenderingContext2D, pool: Particle[]) {
+  for (let i = 0; i < pool.length; i++) {
+    const p = pool[i];
+    if (!p.active) continue;
+    const alpha = p.life / p.maxLife;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function getStreakMultiplier(streak: number): number {
+  if (streak >= 10) return 3;
+  if (streak >= 7) return 2;
+  if (streak >= 5) return 1.5;
+  if (streak >= 3) return 1.25;
+  return 1;
+}
+
+function getMultiplierColor(mult: number): string {
+  if (mult >= 2) return "#ff4444";
+  if (mult >= 1.5) return "#DD550C";
+  if (mult >= 1.25) return "#FFD700";
+  return "white";
+}
+
+function easeOutExpo(t: number): number {
+  return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
 }
 
 interface LeaderboardEntry {
@@ -161,6 +255,33 @@ export default function FieldGoalGame() {
   const resultTextRef = useRef("");
   const resultGoodRef = useRef(false);
 
+  // Particles
+  const particlesRef = useRef<Particle[]>(createParticlePool());
+  const ballTrailRef = useRef<{ x: number; y: number }[]>([]);
+
+  // Screen effects
+  const shakeIntensityRef = useRef(0);
+  const shakeTimerRef = useRef(0);
+  const shakeMaxTimerRef = useRef(0);
+  const freezeFramesRef = useRef(0);
+  const flashColorRef = useRef("");
+  const flashTimerRef = useRef(0);
+  const flashMaxTimerRef = useRef(0);
+
+  // Streak
+  const streakRef = useRef(0);
+  const streakBrokenRef = useRef(false);
+
+  // Score animation
+  const animatedScoreRef = useRef(0);
+  const prevScoreRef = useRef(0);
+  const scoreAnimTimerRef = useRef(0);
+  const scoreAnimMaxRef = useRef(36);
+  const scoreBounceRef = useRef(0);
+
+  // Result stagger
+  const resultFrameRef = useRef(0);
+
   // Animation
   const animFrameRef = useRef(0);
   const frameCountRef = useRef(0);
@@ -181,11 +302,16 @@ export default function FieldGoalGame() {
   // --- Game logic ---
 
   const generateWind = useCallback((distance: number) => {
-    if (distance < 35) {
+    if (distance < 30) {
       windRef.current = 0;
       return;
     }
-    const maxWind = Math.min((distance - 30) * 0.5, 15);
+    let maxWind: number;
+    if (distance <= 35) {
+      maxWind = (distance - 25) * 0.3;
+    } else {
+      maxWind = Math.min((distance - 25) * 0.5, 15);
+    }
     windRef.current = (Math.random() * 2 - 1) * maxWind;
     windRef.current = Math.round(windRef.current * 10) / 10;
   }, []);
@@ -204,6 +330,24 @@ export default function FieldGoalGame() {
     resultTimerRef.current = 0;
     lockedPowerRef.current = 0;
     lockedAimRef.current = 0;
+    streakRef.current = 0;
+    streakBrokenRef.current = false;
+    animatedScoreRef.current = 0;
+    prevScoreRef.current = 0;
+    scoreAnimTimerRef.current = 0;
+    scoreBounceRef.current = 0;
+    resultFrameRef.current = 0;
+    shakeIntensityRef.current = 0;
+    shakeTimerRef.current = 0;
+    shakeMaxTimerRef.current = 0;
+    freezeFramesRef.current = 0;
+    flashColorRef.current = "";
+    flashTimerRef.current = 0;
+    flashMaxTimerRef.current = 0;
+    ballTrailRef.current = [];
+    for (let i = 0; i < particlesRef.current.length; i++) {
+      particlesRef.current[i].active = false;
+    }
     setDisplayScore(0);
   }, []);
 
@@ -269,17 +413,36 @@ export default function FieldGoalGame() {
     const isOnTarget = Math.abs(finalOffset) < halfWidth * 0.85;
 
     let good = false;
+    let isPerfect = false;
     let reason = "";
 
     if (!hasPower) {
-      reason = "SHORT!";
+      const shortness = requiredPower - power;
+      if (shortness < 0.06) {
+        reason = `Just ${Math.max(1, Math.round(shortness * 80))} yards short!`;
+      } else {
+        reason = "SHORT!";
+      }
     } else if (tooMuchPower) {
-      reason = "TOO LONG!";
+      const excess = power - (requiredPower + 0.15);
+      reason = excess < 0.05 ? "Just over!" : "TOO LONG!";
     } else if (!isOnTarget) {
-      reason = finalOffset < 0 ? "WIDE LEFT!" : "WIDE RIGHT!";
+      const overshoot = Math.abs(finalOffset) - halfWidth * 0.85;
+      const dir = finalOffset < 0 ? "left" : "right";
+      if (overshoot < halfWidth * 0.15) {
+        reason = `Barely wide ${dir}!`;
+      } else {
+        reason = finalOffset < 0 ? "WIDE LEFT!" : "WIDE RIGHT!";
+      }
     } else {
       good = true;
-      reason = "GOOD!";
+      const powerDelta = Math.abs(power - requiredPower);
+      if (powerDelta <= 0.03 && Math.abs(aim) < 0.15) {
+        isPerfect = true;
+        reason = "PERFECT!";
+      } else {
+        reason = "GOOD!";
+      }
     }
 
     ballRef.current = {
@@ -291,6 +454,7 @@ export default function FieldGoalGame() {
       aimX: aim,
       windOffset: windPush / halfWidth,
       good,
+      isPerfect,
       resultReason: reason,
     };
 
@@ -384,7 +548,14 @@ export default function FieldGoalGame() {
       // --- Update ---
 
       if (phase === "power") {
-        powerRef.current += POWER_SPEED * powerDirRef.current;
+        const dist = distanceRef.current;
+        let effectivePowerSpeed: number;
+        if (kicksRef.current < 3 && dist <= 30) {
+          effectivePowerSpeed = POWER_SPEED * 0.72;
+        } else {
+          effectivePowerSpeed = POWER_SPEED * Math.min(1 + (dist - 20) * 0.008, 1.5);
+        }
+        powerRef.current += effectivePowerSpeed * powerDirRef.current;
         if (powerRef.current >= 1) {
           powerRef.current = 1;
           powerDirRef.current = -1;
@@ -395,7 +566,13 @@ export default function FieldGoalGame() {
       }
 
       if (phase === "aim") {
-        const speedMult = 1 + (distanceRef.current - 20) * 0.015;
+        const dist = distanceRef.current;
+        let speedMult: number;
+        if (kicksRef.current < 3 && dist <= 30) {
+          speedMult = 0.67;
+        } else {
+          speedMult = 1 + (dist - 20) * 0.012;
+        }
         aimRef.current += AIM_SPEED * aimDirRef.current * speedMult;
         if (aimRef.current >= 1) {
           aimRef.current = 1;
@@ -408,30 +585,114 @@ export default function FieldGoalGame() {
 
       if (phase === "flight" && ballRef.current) {
         const ball = ballRef.current;
-        ball.frame++;
+
+        if (freezeFramesRef.current > 0) {
+          freezeFramesRef.current--;
+        } else {
+          let frameIncrement = 1;
+          if (ball.isPerfect && ball.frame > ball.totalFrames - 15) {
+            frameIncrement = 0.5;
+          }
+          ball.frame += frameIncrement;
+        }
 
         if (ball.frame >= ball.totalFrames) {
+          freezeFramesRef.current = 4;
+
           resultTextRef.current = ball.resultReason;
           resultGoodRef.current = ball.good;
-          resultTimerRef.current = 90;
+          resultFrameRef.current = 0;
+          resultTimerRef.current = ball.good ? 60 : 75;
+
+          const gp = getGoalpostParams(distanceRef.current);
 
           if (ball.good) {
-            const pts = getPointsForDistance(distanceRef.current);
+            streakRef.current++;
+            const mult = getStreakMultiplier(streakRef.current);
+            const basePts = getPointsForDistance(distanceRef.current);
+            const pts = Math.round(basePts * mult);
+            prevScoreRef.current = scoreRef.current;
             scoreRef.current += pts;
+            scoreAnimTimerRef.current = scoreAnimMaxRef.current;
             kicksRef.current++;
             setDisplayScore(scoreRef.current);
+            streakBrokenRef.current = false;
+
+            const particleCount = ball.isPerfect ? 100 : 80;
+            emitParticles(particlesRef.current, particleCount, VANISHING_X, gp.crossbarY - gp.postHeight * 0.3, {
+              speedMin: 1, speedMax: 5, lifeFrames: 60,
+              colors: CONFETTI_COLORS, sizeMin: 2, sizeMax: 5, gravity: true,
+            });
+
+            if (ball.isPerfect) {
+              shakeIntensityRef.current = 10;
+              shakeTimerRef.current = 15;
+              shakeMaxTimerRef.current = 15;
+              flashColorRef.current = "perfect";
+              flashTimerRef.current = 15;
+              flashMaxTimerRef.current = 15;
+            } else {
+              shakeIntensityRef.current = 5;
+              shakeTimerRef.current = 10;
+              shakeMaxTimerRef.current = 10;
+              flashColorRef.current = "rgba(0,200,0,0.15)";
+              flashTimerRef.current = 15;
+              flashMaxTimerRef.current = 15;
+            }
           } else {
+            if (streakRef.current >= 3) {
+              streakBrokenRef.current = true;
+            }
+            streakRef.current = 0;
             missesRef.current++;
+            shakeIntensityRef.current = 3;
+            shakeTimerRef.current = 6;
+            shakeMaxTimerRef.current = 6;
+            flashColorRef.current = "rgba(200,0,0,0.15)";
+            flashTimerRef.current = 15;
+            flashMaxTimerRef.current = 15;
           }
 
+          emitParticles(particlesRef.current, 18, VANISHING_X, gp.crossbarY, {
+            speedMin: 2, speedMax: 6, lifeFrames: 20,
+            colors: ["#ffffff", "#FFD700"], sizeMin: 1, sizeMax: 3,
+          });
+
           ballRef.current = null;
+          ballTrailRef.current = [];
           phaseRef.current = "result";
           setGamePhase("result");
         }
       }
 
+      updateParticles(particlesRef.current, true);
+
+      if (shakeTimerRef.current > 0) {
+        shakeTimerRef.current--;
+      }
+
+      if (flashTimerRef.current > 0) {
+        flashTimerRef.current--;
+      }
+
+      if (scoreAnimTimerRef.current > 0) {
+        scoreAnimTimerRef.current--;
+        const t = 1 - scoreAnimTimerRef.current / scoreAnimMaxRef.current;
+        const eased = easeOutExpo(t);
+        animatedScoreRef.current = prevScoreRef.current + (scoreRef.current - prevScoreRef.current) * eased;
+        if (scoreAnimTimerRef.current === 0) {
+          animatedScoreRef.current = scoreRef.current;
+          scoreBounceRef.current = 8;
+        }
+      }
+
+      if (scoreBounceRef.current > 0) {
+        scoreBounceRef.current--;
+      }
+
       if (phase === "result") {
         resultTimerRef.current--;
+        resultFrameRef.current++;
         if (resultTimerRef.current <= 0) {
           if (missesRef.current >= MAX_MISSES) {
             endGame();
@@ -444,6 +705,7 @@ export default function FieldGoalGame() {
             powerDirRef.current = 1;
             aimRef.current = -1;
             aimDirRef.current = 1;
+            streakBrokenRef.current = false;
             phaseRef.current = "power";
             setGamePhase("power");
           }
@@ -452,6 +714,13 @@ export default function FieldGoalGame() {
 
       // --- Draw ---
       ctx.save();
+
+      if (shakeTimerRef.current > 0) {
+        const ratio = shakeTimerRef.current / shakeMaxTimerRef.current;
+        const shakeX = (Math.random() * 2 - 1) * shakeIntensityRef.current * ratio;
+        const shakeY = (Math.random() * 2 - 1) * shakeIntensityRef.current * ratio;
+        ctx.translate(shakeX, shakeY);
+      }
 
       // Sky gradient
       const skyGrad = ctx.createLinearGradient(0, 0, 0, HORIZON_Y);
@@ -677,6 +946,20 @@ export default function FieldGoalGame() {
           by = baseY - arc;
         }
 
+        const trail = ballTrailRef.current;
+        trail.push({ x: bx, y: by });
+        if (trail.length > BALL_TRAIL_LENGTH) trail.shift();
+        for (let i = 0; i < trail.length; i++) {
+          const alpha = ((i + 1) / trail.length) * 0.4;
+          const sz = (1 - t * 0.7) * 3 * ((i + 1) / trail.length);
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = "#8B4513";
+          ctx.beginPath();
+          ctx.arc(trail[i].x, trail[i].y, sz, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
         const ballScale = 1 - t * 0.7;
         const ballW = 5 * ballScale;
         const ballH = 8 * ballScale;
@@ -706,34 +989,64 @@ export default function FieldGoalGame() {
         ctx.restore();
       }
 
-      // --- Result text ---
+      // --- Result text (staggered) ---
       if (phase === "result" && resultTimerRef.current > 0) {
+        const rf = resultFrameRef.current;
+        const maxT = resultGoodRef.current ? 60 : 75;
         const alpha = Math.min(resultTimerRef.current / 30, 1);
-        const bounceT = 1 - resultTimerRef.current / 90;
+        const bounceT = rf / maxT;
         const scale = 1 + Math.sin(bounceT * Math.PI) * 0.2;
 
         ctx.save();
         ctx.translate(VANISHING_X, CANVAS_H / 2 - 20);
         ctx.scale(scale, scale);
 
-        ctx.font = "bold 48px sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
+        if (rf >= 0) {
+          const fadeIn = Math.min(rf / 8, 1);
+          ctx.font = "bold 48px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillStyle = "rgba(0,0,0,0.5)";
+          ctx.globalAlpha = fadeIn * alpha;
+          ctx.fillText(resultTextRef.current, 2, 2);
 
-        ctx.fillStyle = "rgba(0,0,0,0.5)";
-        ctx.fillText(resultTextRef.current, 2, 2);
+          const isPerfectResult = resultTextRef.current === "PERFECT!";
+          ctx.fillStyle = isPerfectResult
+            ? GOALPOST_YELLOW
+            : resultGoodRef.current
+              ? GOALPOST_YELLOW
+              : "#ff4444";
+          ctx.fillText(resultTextRef.current, 0, 0);
+        }
 
-        ctx.fillStyle = resultGoodRef.current
-          ? GOALPOST_YELLOW
-          : "#ff4444";
-        ctx.globalAlpha = alpha;
-        ctx.fillText(resultTextRef.current, 0, 0);
-
-        if (resultGoodRef.current) {
-          const pts = getPointsForDistance(distanceRef.current);
+        if (resultGoodRef.current && rf >= 10) {
+          const fadeIn2 = Math.min((rf - 10) / 8, 1);
+          ctx.globalAlpha = fadeIn2 * alpha;
+          const mult = getStreakMultiplier(streakRef.current);
+          const basePts = getPointsForDistance(distanceRef.current);
+          const pts = Math.round(basePts * mult);
           ctx.font = "bold 24px sans-serif";
-          ctx.fillStyle = "white";
-          ctx.fillText(`+${pts} pts`, 0, 40);
+          ctx.fillStyle = mult > 1 ? getMultiplierColor(mult) : "white";
+          const ptsText = mult > 1 ? `+${pts} pts (${mult}x)` : `+${pts} pts`;
+          ctx.fillText(ptsText, 0, 40);
+        }
+
+        if (rf >= 18) {
+          const fadeIn3 = Math.min((rf - 18) / 8, 1);
+          ctx.globalAlpha = fadeIn3 * alpha;
+          if (streakBrokenRef.current) {
+            ctx.font = "bold 20px sans-serif";
+            ctx.fillStyle = "#ff4444";
+            ctx.fillText("STREAK BROKEN!", 0, resultGoodRef.current ? 70 : 40);
+          } else if (streakRef.current >= 3 && resultGoodRef.current) {
+            const pulse = 1 + Math.sin(frameCountRef.current * 0.1) * 0.075;
+            ctx.save();
+            ctx.scale(pulse, pulse);
+            ctx.font = "bold 20px sans-serif";
+            ctx.fillStyle = getMultiplierColor(getStreakMultiplier(streakRef.current));
+            ctx.fillText(`x${streakRef.current} STREAK!`, 0, 70);
+            ctx.restore();
+          }
         }
 
         ctx.restore();
@@ -764,7 +1077,8 @@ export default function FieldGoalGame() {
 
         const reqPower = Math.min(0.3 + (distanceRef.current - 20) * 0.013, 0.95);
         const sweetY = meterY + meterH - reqPower * meterH;
-        ctx.fillStyle = "rgba(255,255,255,0.25)";
+        const sweetAlpha = Math.sin(frameCountRef.current * 0.06) * 0.15 + 0.1;
+        ctx.fillStyle = `rgba(255,255,255,${(0.25 + sweetAlpha).toFixed(2)})`;
         ctx.fillRect(meterX + 2, sweetY - 8, meterW - 4, 16);
 
         const fillH = (phase === "power" ? powerRef.current : lockedPowerRef.current) * meterH;
@@ -886,9 +1200,21 @@ export default function FieldGoalGame() {
         ctx.textAlign = "left";
         ctx.fillText("SCORE", 18, 17);
 
+        const displayedScore = scoreAnimTimerRef.current > 0
+          ? Math.round(animatedScoreRef.current)
+          : scoreRef.current;
+        const bounceScale = scoreBounceRef.current > 0
+          ? 1 + (scoreBounceRef.current / 8) * 0.2
+          : 1;
+        ctx.save();
+        ctx.translate(18, 32);
+        ctx.scale(bounceScale, bounceScale);
         ctx.font = "bold 16px sans-serif";
         ctx.fillStyle = ORANGE;
-        ctx.fillText(String(scoreRef.current), 18, 32);
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(displayedScore), 0, 0);
+        ctx.restore();
 
         // Misses remaining
         const missX = CANVAS_W / 2 - 30;
@@ -925,6 +1251,20 @@ export default function FieldGoalGame() {
           ctx.restore();
         }
 
+        if (streakRef.current >= 3 && phase !== "result") {
+          const mult = getStreakMultiplier(streakRef.current);
+          const pulse = 1 + Math.sin(frameCountRef.current * 0.1) * 0.075;
+          ctx.save();
+          ctx.translate(50, 52);
+          ctx.scale(pulse, pulse);
+          ctx.font = "bold 12px sans-serif";
+          ctx.fillStyle = getMultiplierColor(mult);
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(`x${streakRef.current} STREAK! ${mult}x`, 0, 0);
+          ctx.restore();
+        }
+
         if (bestScoreRef.current > 0) {
           ctx.font = "bold 9px sans-serif";
           ctx.fillStyle = "rgba(255,255,255,0.35)";
@@ -949,6 +1289,24 @@ export default function FieldGoalGame() {
             ctx.fillText("TAP to set aim!", CANVAS_W / 2, CANVAS_H - 15);
           }
         }
+      }
+
+      // --- Particles ---
+      drawParticles(ctx, particlesRef.current);
+
+      // --- Color flash overlay ---
+      if (flashTimerRef.current > 0) {
+        const flashAlpha = flashTimerRef.current / flashMaxTimerRef.current;
+        if (flashColorRef.current === "perfect") {
+          const grad = ctx.createRadialGradient(VANISHING_X, CANVAS_H / 2, 0, VANISHING_X, CANVAS_H / 2, 300);
+          grad.addColorStop(0, `rgba(255,215,0,${(0.2 * flashAlpha).toFixed(3)})`);
+          grad.addColorStop(1, `rgba(255,215,0,0)`);
+          ctx.fillStyle = grad;
+        } else {
+          const base = flashColorRef.current.replace(/[\d.]+\)$/, `${(0.15 * flashAlpha).toFixed(3)})`);
+          ctx.fillStyle = base;
+        }
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
       }
 
       // --- Menu overlay ---
