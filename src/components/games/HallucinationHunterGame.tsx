@@ -551,7 +551,7 @@ function getStreakInfo(streak: number) {
   return null;
 }
 
-const LS_KEY = "portal-hallucination-scores";
+const GAME_SLUG = "hallucination-hunter";
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -712,7 +712,7 @@ export default function HallucinationHunterGame() {
 
   const saveScore = useCallback(() => {
     if (!nameInput.trim() || scoreSaved) return;
-    addScore(LS_KEY, nameInput.trim(), score);
+    addScore(GAME_SLUG, nameInput.trim(), score);
     setScoreSaved(true);
     setLbRefreshKey((k) => k + 1);
   }, [nameInput, score, scoreSaved]);
@@ -1046,7 +1046,7 @@ export default function HallucinationHunterGame() {
           </div>
 
           {/* Leaderboard */}
-          <GameLeaderboard gameSlug={LS_KEY} refreshKey={lbRefreshKey} />
+          <GameLeaderboard gameSlug={GAME_SLUG} refreshKey={lbRefreshKey} />
         </div>
       )}
 
