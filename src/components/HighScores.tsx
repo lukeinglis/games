@@ -49,10 +49,7 @@ function loadAllScores(): AggregatedScore[] {
     }
   }
 
-  return all.sort((a, b) => {
-    if (a.date && b.date) return b.date.localeCompare(a.date);
-    return b.score - a.score;
-  }).slice(0, 10);
+  return all.sort((a, b) => b.score - a.score).slice(0, 10);
 }
 
 function formatDate(iso: string): string {
@@ -91,7 +88,7 @@ export default function HighScores() {
             🏆
           </span>
           <h2 className="font-heading text-[10px] text-gold uppercase tracking-widest">
-            Recent High Scores
+            High Scores
           </h2>
         </div>
         <p className="text-center text-sm text-gray-500 py-6">
@@ -108,7 +105,7 @@ export default function HighScores() {
           🏆
         </span>
         <h2 className="font-heading text-[10px] text-gold uppercase tracking-widest">
-          Recent High Scores
+          High Scores
         </h2>
       </div>
 
