@@ -49,6 +49,15 @@ const KERB_SIZE = 8;
 const SHAKE_MS = 200;
 const SHAKE_PX = 4;
 
+// ── Juice: particle pool ──
+const MAX_PARTICLES = 120;
+const TRAIL_COLORS = ["#ff6600", "#ff4400", "#ff8800", "#FFD700"];
+const OVERTAKE_COLORS = ["#FFD700", "#fff", "#ff8800"];
+const CRASH_COLORS = ["#ff2200", "#ff4400", "#ff6600", "#222"];
+
+// ── Juice: streak ──
+const ONBOARDING_BARRIERS = 3;
+
 // ── localStorage key ──
 const STORAGE_KEY = "portal-f1racer-scores";
 
@@ -70,6 +79,82 @@ interface Particle {
   maxLife: number;
   size: number;
   color: string;
+  active: boolean;
+}
+
+function createParticlePool(): Particle[] {
+  const pool: Particle[] = [];
+  for (let i = 0; i < MAX_PARTICLES; i++) {
+    pool.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 1, size: 2, color: "#fff", active: false });
+  }
+  return pool;
+}
+
+function emitParticles(
+  pool: Particle[], count: number, x: number, y: number,
+  opts: { speedMin: number; speedMax: number; lifeFrames: number; colors: string[]; sizeMin: number; sizeMax: number; dirMin?: number; dirMax?: number },
+) {
+  let emitted = 0;
+  for (let i = 0; i < pool.length && emitted < count; i++) {
+    if (!pool[i].active) {
+      const dirMin = opts.dirMin ?? 0;
+      const dirMax = opts.dirMax ?? Math.PI * 2;
+      const angle = dirMin + Math.random() * (dirMax - dirMin);
+      const speed = opts.speedMin + Math.random() * (opts.speedMax - opts.speedMin);
+      pool[i].x = x;
+      pool[i].y = y;
+      pool[i].vx = Math.cos(angle) * speed;
+      pool[i].vy = Math.sin(angle) * speed;
+      pool[i].life = opts.lifeFrames;
+      pool[i].maxLife = opts.lifeFrames;
+      pool[i].color = opts.colors[Math.floor(Math.random() * opts.colors.length)];
+      pool[i].size = opts.sizeMin + Math.random() * (opts.sizeMax - opts.sizeMin);
+      pool[i].active = true;
+      emitted++;
+    }
+  }
+}
+
+function updateParticlePool(pool: Particle[], dt: number) {
+  for (let i = 0; i < pool.length; i++) {
+    const p = pool[i];
+    if (!p.active) continue;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.97;
+    p.vy *= 0.97;
+    p.life -= dt;
+    if (p.life <= 0) p.active = false;
+  }
+}
+
+function drawParticlePool(ctx: CanvasRenderingContext2D, pool: Particle[]) {
+  for (let i = 0; i < pool.length; i++) {
+    const p = pool[i];
+    if (!p.active) continue;
+    const alpha = p.life / p.maxLife;
+    ctx.globalAlpha = alpha * alpha;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function getStreakMultiplier(streak: number): number {
+  if (streak >= 10) return 3;
+  if (streak >= 7) return 2;
+  if (streak >= 5) return 1.5;
+  if (streak >= 3) return 1.25;
+  return 1;
+}
+
+function getMultiplierColor(mult: number): string {
+  if (mult >= 2) return "#ff4444";
+  if (mult >= 1.5) return "#FF8000";
+  if (mult >= 1.25) return "#FFD700";
+  return "white";
 }
 interface LeaderboardEntry {
   name: string;
@@ -111,10 +196,10 @@ export default function F1Game() {
     gameOver: false,
     score: 0,
     carY: 0,
-    vel: 0, // vertical velocity
-    holding: false, // space/click held
+    vel: 0,
+    holding: false,
     barriers: [] as Barrier[],
-    particles: [] as Particle[],
+    particles: createParticlePool(),
     speed: INITIAL_SPEED,
     gapSize: INITIAL_GAP,
     distance: 0,
@@ -124,7 +209,17 @@ export default function F1Game() {
     bestScore: 0,
     raceIndex: 0,
     shakeUntil: 0,
-    lastTime: 0, // for delta-time
+    lastTime: 0,
+    // Juice state
+    streak: 0,
+    barriersPassed: 0,
+    flashColor: "",
+    flashTimer: 0,
+    flashMaxTimer: 0,
+    scorePopText: "",
+    scorePopTimer: 0,
+    scorePopX: 0,
+    scorePopY: 0,
   });
 
   const animRef = useRef<number>(0);
@@ -136,6 +231,8 @@ export default function F1Game() {
   const [started, setStarted] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard());
   const [bestScore, setBestScore] = useState(0);
+  const [finalBarriersPassed, setFinalBarriersPassed] = useState(0);
+  const [finalStreak, setFinalStreak] = useState(0);
 
   // Pre-rendered crowd strip (avoids hundreds of fillRect per frame)
   const crowdCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -396,16 +493,8 @@ export default function F1Game() {
       const racingLinePoints = computeRacingLine(s);
       drawRacingLine(ctx, racingLinePoints);
 
-      // ── Particles ──
-      for (const p of s.particles) {
-        const lifeRatio = p.life / p.maxLife;
-        ctx.globalAlpha = lifeRatio * lifeRatio;
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * lifeRatio, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
+      // ── Particles (fixed pool) ──
+      drawParticlePool(ctx, s.particles);
 
       // ── Barriers ──
       const playTop = trackTop;
@@ -483,11 +572,48 @@ export default function F1Game() {
       ctx.font = "11px monospace";
       ctx.fillText(`SPD ${speedPct}%`, 12, trackTop + 28);
 
+      if (s.streak >= 3) {
+        const mult = getStreakMultiplier(s.streak);
+        const pulse = 1 + Math.sin(Date.now() * 0.006) * 0.08;
+        ctx.save();
+        ctx.translate(12, trackTop + 44);
+        ctx.scale(pulse, pulse);
+        ctx.font = "bold 12px monospace";
+        ctx.fillStyle = getMultiplierColor(mult);
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.fillText(`x${s.streak} STREAK ${mult}x`, 0, 0);
+        ctx.restore();
+      }
+
       if (s.bestScore > 0) {
         ctx.fillStyle = "rgba(255,255,255,0.3)";
         ctx.font = "11px monospace";
         ctx.textAlign = "right";
         ctx.fillText(`BEST: ${s.bestScore}m`, w - 12, trackTop + 8);
+      }
+
+      // ── Score pop ──
+      if (s.scorePopTimer > 0) {
+        const popAlpha = s.scorePopTimer / 30;
+        const popY = s.scorePopY - (30 - s.scorePopTimer) * 1.5;
+        ctx.save();
+        ctx.globalAlpha = popAlpha;
+        ctx.font = "bold 16px monospace";
+        ctx.fillStyle = "#FFD700";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(s.scorePopText, s.scorePopX, popY);
+        ctx.restore();
+      }
+
+      // ── Flash overlay ──
+      if (s.flashTimer > 0) {
+        const flashAlpha = (s.flashTimer / s.flashMaxTimer) * 0.25;
+        ctx.fillStyle = s.flashColor === "gold"
+          ? `rgba(255,215,0,${flashAlpha.toFixed(3)})`
+          : `rgba(255,0,0,${flashAlpha.toFixed(3)})`;
+        ctx.fillRect(0, 0, w, h);
       }
     },
     [],
@@ -523,12 +649,21 @@ export default function F1Game() {
     s.vel = Math.max(-MAX_VEL, Math.min(MAX_VEL, s.vel));
     s.carY += s.vel * dt;
 
-    // ── Difficulty ramp ──
+    // ── Difficulty ramp (easy first 3 barriers for onboarding) ──
     s.distance += s.speed * dt;
-    s.speed = Math.min(MAX_SPEED, INITIAL_SPEED + s.distance * 0.0003);
-    s.gapSize = Math.max(MIN_GAP, INITIAL_GAP - s.distance * 0.008);
+    if (s.barriersPassed < ONBOARDING_BARRIERS) {
+      s.speed = INITIAL_SPEED;
+      s.gapSize = INITIAL_GAP;
+    } else {
+      s.speed = Math.min(MAX_SPEED, INITIAL_SPEED + s.distance * 0.0003);
+      s.gapSize = Math.max(MIN_GAP, INITIAL_GAP - s.distance * 0.008);
+    }
     s.score = Math.floor(s.distance / 10);
     s.scrollOffset += s.speed * dt;
+
+    // ── Juice timers ──
+    if (s.flashTimer > 0) s.flashTimer -= dt;
+    if (s.scorePopTimer > 0) s.scorePopTimer -= dt;
 
     // ── Move barriers left ──
     s.barriers = s.barriers
@@ -540,7 +675,12 @@ export default function F1Game() {
       ? Math.max(...s.barriers.map((b) => b.x))
       : 0;
 
-    if (s.barriers.length === 0 || rightmost < w - BARRIER_SPACING + BARRIER_W) {
+    // Wider spacing during onboarding for easier starts
+    const effectiveSpacing = s.barriersPassed < ONBOARDING_BARRIERS
+      ? BARRIER_SPACING * 1.3
+      : BARRIER_SPACING;
+
+    if (s.barriers.length === 0 || rightmost < w - effectiveSpacing + BARRIER_W) {
       const team = TEAM_PALETTE[Math.floor(Math.random() * TEAM_PALETTE.length)];
       const raceName = RACE_NAMES[s.raceIndex % RACE_NAMES.length];
       s.raceIndex++;
@@ -559,28 +699,28 @@ export default function F1Game() {
       });
     }
 
-    // ── Particles (exhaust trail, dt-adjusted spawn rate) ──
-    if (Math.random() < 0.6 * dt) {
-      const isSpark = Math.random() < 0.3;
-      const life = isSpark ? 12 : 18;
-      s.particles.push({
-        x: carX - CAR_W / 2 - 2,
-        y: s.carY + (Math.random() - 0.5) * 6,
-        vx: -1.5 - Math.random() * 2,
-        vy: (Math.random() - 0.5) * 1.5,
-        life,
-        maxLife: life,
-        size: isSpark ? 2 : 3,
-        color: isSpark ? "#FFD700" : Math.random() < 0.5 ? "#ff6600" : "#E8002D",
+    // ── Speed trail particles (more particles at higher speed) ──
+    const speedRatio = (s.speed - INITIAL_SPEED) / (MAX_SPEED - INITIAL_SPEED);
+    const trailChance = 0.3 + speedRatio * 0.7;
+    if (Math.random() < trailChance * dt) {
+      const trailCount = speedRatio > 0.5 ? 2 : 1;
+      emitParticles(s.particles, trailCount, carX - CAR_W / 2 - 2, s.carY + (Math.random() - 0.5) * 6, {
+        speedMin: 1, speedMax: 2 + speedRatio * 3, lifeFrames: 10 + speedRatio * 15,
+        colors: TRAIL_COLORS, sizeMin: 1.5, sizeMax: 3 + speedRatio * 2,
+        dirMin: Math.PI * 0.6, dirMax: Math.PI * 1.4,
       });
     }
-    s.particles = s.particles
-      .map((p) => ({ ...p, x: p.x + p.vx * dt, y: p.y + p.vy * dt, life: p.life - dt }))
-      .filter((p) => p.life > 0);
+    updateParticlePool(s.particles, dt);
 
     // ── Collision: top/bottom walls ──
     if (s.carY - CAR_H / 2 < playTop || s.carY + CAR_H / 2 > playBot) {
-      s.shakeUntil = performance.now() + SHAKE_MS;
+      s.shakeUntil = performance.now() + SHAKE_MS * 2;
+      s.flashColor = "red";
+      s.flashTimer = 20;
+      s.flashMaxTimer = 20;
+      emitParticles(s.particles, 30, carX, s.carY, {
+        speedMin: 2, speedMax: 8, lifeFrames: 25, colors: CRASH_COLORS, sizeMin: 2, sizeMax: 5,
+      });
       endGameRef.current();
       return;
     }
@@ -599,12 +739,54 @@ export default function F1Game() {
         }
       }
       if (!b.scored && b.x + BARRIER_W < carLeft) {
+        // Overtake! Barrier passed cleanly
+        s.streak++;
+        s.barriersPassed++;
+        const mult = getStreakMultiplier(s.streak);
+
+        // Gold flash on overtake
+        s.flashColor = "gold";
+        s.flashTimer = 10;
+        s.flashMaxTimer = 10;
+
+        // Overtake particles at the gap
+        const gapCenter = b.gapY + b.gapH / 2;
+        const particleCount = s.streak >= 5 ? 25 : 15;
+        emitParticles(s.particles, particleCount, b.x + BARRIER_W, gapCenter, {
+          speedMin: 1, speedMax: 4 + s.streak * 0.3, lifeFrames: 20 + s.streak * 2,
+          colors: OVERTAKE_COLORS, sizeMin: 2, sizeMax: 4,
+          dirMin: -Math.PI * 0.5, dirMax: Math.PI * 0.5,
+        });
+
+        // Light screen shake on big streaks
+        if (s.streak >= 5) {
+          s.shakeUntil = performance.now() + 100;
+        }
+
+        // Score pop text
+        if (mult > 1) {
+          s.scorePopText = `${mult}x OVERTAKE!`;
+        } else if (s.streak >= 2) {
+          s.scorePopText = `x${s.streak}`;
+        } else {
+          s.scorePopText = "PASS!";
+        }
+        s.scorePopTimer = 30;
+        s.scorePopX = b.x + BARRIER_W;
+        s.scorePopY = gapCenter;
+
         return { ...b, scored: true };
       }
       return b;
     });
     if (collided) {
-      s.shakeUntil = performance.now() + SHAKE_MS;
+      s.shakeUntil = performance.now() + SHAKE_MS * 2;
+      s.flashColor = "red";
+      s.flashTimer = 20;
+      s.flashMaxTimer = 20;
+      emitParticles(s.particles, 30, carX, s.carY, {
+        speedMin: 2, speedMax: 8, lifeFrames: 25, colors: CRASH_COLORS, sizeMin: 2, sizeMax: 5,
+      });
       endGameRef.current();
       return;
     }
@@ -637,25 +819,30 @@ export default function F1Game() {
       setBestScore(s.score);
     }
     setDisplayScore(s.score);
+    setFinalBarriersPassed(s.barriersPassed);
+    setFinalStreak(s.streak > 0 ? s.streak : s.barriersPassed);
     setGameOver(true);
 
-    // Shake animation after crash
+    // Shake + crash particle animation after crash
     const shakeEnd = s.shakeUntil;
+    const shakeDuration = SHAKE_MS * 2;
     const shakeLoop = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       const now = performance.now();
+      updateParticlePool(s.particles, 1);
+      if (s.flashTimer > 0) s.flashTimer -= 1;
       if (now >= shakeEnd) {
         renderFrame(ctx, s);
         return;
       }
-      const decay = (shakeEnd - now) / SHAKE_MS;
+      const decay = (shakeEnd - now) / shakeDuration;
       ctx.save();
       ctx.translate(
-        (Math.random() - 0.5) * SHAKE_PX * 2 * decay,
-        (Math.random() - 0.5) * SHAKE_PX * 2 * decay,
+        (Math.random() - 0.5) * SHAKE_PX * 3 * decay,
+        (Math.random() - 0.5) * SHAKE_PX * 3 * decay,
       );
       renderFrame(ctx, s);
       ctx.restore();
@@ -692,7 +879,7 @@ export default function F1Game() {
     s.vel = 0;
     s.holding = false;
     s.barriers = [];
-    s.particles = [];
+    for (let i = 0; i < s.particles.length; i++) s.particles[i].active = false;
     s.speed = INITIAL_SPEED;
     s.gapSize = INITIAL_GAP;
     s.distance = 0;
@@ -700,6 +887,13 @@ export default function F1Game() {
     s.raceIndex = Math.floor(Math.random() * RACE_NAMES.length);
     s.shakeUntil = 0;
     s.lastTime = 0;
+    s.streak = 0;
+    s.barriersPassed = 0;
+    s.flashColor = "";
+    s.flashTimer = 0;
+    s.flashMaxTimer = 0;
+    s.scorePopText = "";
+    s.scorePopTimer = 0;
 
     setGameOver(false);
     setStarted(true);
@@ -841,6 +1035,9 @@ export default function F1Game() {
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm">
             <h2 className="text-2xl font-bold mb-1 text-red-500">Race Over</h2>
             <p className="text-4xl font-bold mb-1">{displayScore}m</p>
+            <p className="text-zinc-400 text-sm mb-1">
+              {finalBarriersPassed} overtakes | Best streak: {finalStreak}
+            </p>
             {bestScore > 0 && bestScore > displayScore && (
               <p className="text-zinc-500 text-sm mb-2">Best: {bestScore}m</p>
             )}
