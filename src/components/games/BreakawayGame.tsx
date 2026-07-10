@@ -164,7 +164,7 @@ interface SpeedLine {
 
 interface LeaderboardEntry {
   name: string;
-  yards: number;
+  score: number;
   date: string;
 }
 
@@ -189,8 +189,8 @@ function loadLeaderboard(): LeaderboardEntry[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as LeaderboardEntry[];
     return parsed
-      .filter((e) => e && typeof e.name === "string" && typeof e.yards === "number")
-      .sort((a, b) => b.yards - a.yards)
+      .filter((e) => e && typeof e.name === "string" && typeof e.score === "number")
+      .sort((a, b) => b.score - a.score)
       .slice(0, 10);
   } catch {
     return [];
@@ -200,7 +200,7 @@ function loadLeaderboard(): LeaderboardEntry[] {
 function saveToLeaderboard(entry: LeaderboardEntry): LeaderboardEntry[] {
   const existing = loadLeaderboard();
   existing.push(entry);
-  const sorted = existing.sort((a, b) => b.yards - a.yards).slice(0, 10);
+  const sorted = existing.sort((a, b) => b.score - a.score).slice(0, 10);
   try {
     localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(sorted));
   } catch { /* storage full */ }
@@ -253,8 +253,8 @@ export default function BreakawayGame() {
 
   // React state for UI overlay
   const [gameState, setGameState] = useState<GameState>("menu");
-  const [_yards, setYards] = useState(0);
-  const [_score, setScore] = useState(0);
+  const [, setYards] = useState(0);
+  const [, setScore] = useState(0);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard());
   const [scoreSaved, setScoreSaved] = useState(false);
   const [scoreRank, setScoreRank] = useState<number | null>(null);
@@ -325,14 +325,14 @@ export default function BreakawayGame() {
       if (name && name.trim()) {
         const entry: LeaderboardEntry = {
           name: name.trim(),
-          yards: finalScore,
+          score: finalScore,
           date: new Date().toISOString(),
         };
         const updated = saveToLeaderboard(entry);
         setLeaderboard(updated);
         setScoreSaved(true);
         const rank = updated.findIndex(
-          (e) => e.name === entry.name && e.yards === entry.yards && e.date === entry.date
+          (e) => e.name === entry.name && e.score === entry.score && e.date === entry.date
         );
         setScoreRank(rank >= 0 ? rank + 1 : null);
       }
@@ -1206,7 +1206,7 @@ export default function BreakawayGame() {
             <div className="divide-y divide-white/5">
               {leaderboard.map((entry, i) => (
                 <div
-                  key={`${entry.name}-${entry.yards}-${i}`}
+                  key={`${entry.name}-${entry.score}-${i}`}
                   className={`flex items-center gap-3 px-4 py-2.5 ${
                     scoreRank === i + 1 && scoreSaved
                       ? "bg-[#DD550C]/10"
@@ -1230,7 +1230,7 @@ export default function BreakawayGame() {
                     </p>
                   </div>
                   <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#DD550C]">
-                    {entry.yards.toLocaleString()}
+                    {entry.score.toLocaleString()} pts
                   </span>
                 </div>
               ))}
