@@ -12,6 +12,7 @@ const filterEmojis: Record<string, string> = {
   Trivia: "🧠",
   Prediction: "🔮",
   Fantasy: "⭐",
+  AI: "🤖",
 };
 
 export function CategoryNav({

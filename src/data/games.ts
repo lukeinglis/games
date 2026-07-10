@@ -1,4 +1,4 @@
-export type GameCategory = "Sports" | "Racing" | "Trivia" | "Prediction" | "Fantasy";
+export type GameCategory = "Sports" | "Racing" | "Trivia" | "Prediction" | "Fantasy" | "AI";
 
 export interface Game {
   slug: string;
@@ -77,6 +77,56 @@ export const games: Game[] = [
     thumbnail: "/thumbnails/guess-the-flag.png",
     url: "/games/guess-the-flag",
     featured: true,
+  },
+  {
+    slug: "gradient-descent",
+    title: "Gradient Descent",
+    tagline: "Find the minimum",
+    description: "Guide a ball down a loss landscape to find the global minimum. Dodge local minima traps and saddle points.",
+    category: "AI",
+    color: "#00BCD4",
+    emoji: "📉",
+    thumbnail: "/thumbnails/gradient-descent.png",
+    url: "/games/gradient-descent",
+    featured: true,
+    hot: true,
+  },
+  {
+    slug: "overfit",
+    title: "Overfit!",
+    tagline: "Fit the curve",
+    description: "Draw a curve through noisy data points. Too simple is underfit, too wiggly is overfit. Find the sweet spot.",
+    category: "AI",
+    color: "#00BFA5",
+    emoji: "📈",
+    thumbnail: "/thumbnails/overfit.png",
+    url: "/games/overfit",
+    featured: true,
+  },
+  {
+    slug: "token-blitz",
+    title: "Token Blitz",
+    tagline: "Count the tokens",
+    description: "Guess how many tokens a sentence has. Test your BPE tokenizer intuition against the clock.",
+    category: "AI",
+    color: "#6366F1",
+    emoji: "🔤",
+    thumbnail: "/thumbnails/token-blitz.png",
+    url: "/games/token-blitz",
+    featured: true,
+  },
+  {
+    slug: "hallucination-hunter",
+    title: "Hallucination Hunter",
+    tagline: "Spot the fakes",
+    description: "Read paragraphs with hidden fabrications. Click the hallucinated sentences before your strikes run out.",
+    category: "AI",
+    color: "#F59E0B",
+    emoji: "🔍",
+    thumbnail: "/thumbnails/hallucination-hunter.png",
+    url: "/games/hallucination-hunter",
+    featured: true,
+    hot: true,
   },
   {
     slug: "world-cup-2026",
