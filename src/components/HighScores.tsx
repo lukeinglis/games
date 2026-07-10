@@ -1,13 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { games } from "@/data/games";
-
-interface LeaderboardEntry {
-  name: string;
-  score: number;
-  date: string;
-}
 
 interface AggregatedScore {
   game: string;
@@ -81,13 +75,12 @@ function formatDate(iso: string): string {
 }
 
 export default function HighScores() {
-  const [scores, setScores] = useState<AggregatedScore[]>([]);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setScores(loadAllScores());
-    setMounted(true);
-  }, []);
+  const [scores] = useState<AggregatedScore[]>(() => loadAllScores());
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   if (!mounted) return null;
   if (scores.length === 0) {
