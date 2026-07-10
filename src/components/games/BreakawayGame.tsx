@@ -37,36 +37,25 @@ const TACKLER_H = 34;
 const TACKLER_W_WIDE = LANE_W * 2 - 10;
 
 const POWERUP_SIZE = 22;
-const POWERUP_DURATION = 3000; // ms of invincibility
+const POWERUP_DURATION = 3000;
 
 const INITIAL_SPEED = 3;
 const MAX_SPEED = 10;
-const SPEED_RAMP = 0.0003; // per frame
-const TACKLER_SPAWN_INTERVAL_INIT = 60; // frames
+const SPEED_RAMP = 0.0003;
+const TACKLER_SPAWN_INTERVAL_INIT = 60;
 const TACKLER_SPAWN_INTERVAL_MIN = 18;
 
-const PARTICLE_COUNT_PER_FRAME = 1;
-const MAX_PARTICLES = 40;
-
-const YARD_LINE_SPACING = 60; // pixels per 10 yards of field
+const YARD_LINE_SPACING = 60;
 
 const LOCALSTORAGE_KEY = "portal-breakaway-scores";
 
-// --- Types ---
+// --- Particle pool ---
 
-interface Tackler {
-  lane: number;
-  y: number;
-  wide: boolean; // spans 2 lanes
-  jersey: number; // fixed jersey number assigned at spawn
-}
+const MAX_POOL_PARTICLES = 120;
+const GOAL_COLORS = ["#00cc44", "#FFD700", "#ffffff"];
+const TRAIL_COLORS = ["#DD550C", "#FFD700"];
 
-interface Powerup {
-  lane: number;
-  y: number;
-}
-
-interface Particle {
+interface PoolParticle {
   x: number;
   y: number;
   vx: number;
@@ -75,6 +64,95 @@ interface Particle {
   maxLife: number;
   size: number;
   color: string;
+  active: boolean;
+}
+
+function createParticlePool(): PoolParticle[] {
+  const pool: PoolParticle[] = [];
+  for (let i = 0; i < MAX_POOL_PARTICLES; i++) {
+    pool.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0, size: 2, color: "#fff", active: false });
+  }
+  return pool;
+}
+
+function emitParticles(
+  pool: PoolParticle[], count: number,
+  x: number, y: number,
+  opts: { speedMin: number; speedMax: number; lifeFrames: number; colors: string[]; sizeMin: number; sizeMax: number; gravity?: boolean },
+) {
+  let emitted = 0;
+  for (let i = 0; i < pool.length && emitted < count; i++) {
+    if (!pool[i].active) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = opts.speedMin + Math.random() * (opts.speedMax - opts.speedMin);
+      pool[i].x = x;
+      pool[i].y = y;
+      pool[i].vx = Math.cos(angle) * speed;
+      pool[i].vy = Math.sin(angle) * speed - (opts.gravity ? 2 : 0);
+      pool[i].life = opts.lifeFrames;
+      pool[i].maxLife = opts.lifeFrames;
+      pool[i].color = opts.colors[Math.floor(Math.random() * opts.colors.length)];
+      pool[i].size = opts.sizeMin + Math.random() * (opts.sizeMax - opts.sizeMin);
+      pool[i].active = true;
+      emitted++;
+    }
+  }
+}
+
+function updatePoolParticles(pool: PoolParticle[], applyGravity: boolean) {
+  for (let i = 0; i < pool.length; i++) {
+    const p = pool[i];
+    if (!p.active) continue;
+    p.x += p.vx;
+    p.y += p.vy;
+    if (applyGravity) p.vy += 0.1;
+    p.vx *= 0.99;
+    p.life--;
+    if (p.life <= 0) p.active = false;
+  }
+}
+
+function drawPoolParticles(ctx: CanvasRenderingContext2D, pool: PoolParticle[]) {
+  for (let i = 0; i < pool.length; i++) {
+    const p = pool[i];
+    if (!p.active) continue;
+    const alpha = p.life / p.maxLife;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// --- Streak helpers ---
+
+function getStreakMultiplier(streak: number): number {
+  if (streak >= 10) return 3;
+  if (streak >= 7) return 2;
+  if (streak >= 5) return 1.5;
+  if (streak >= 3) return 1.25;
+  return 1;
+}
+
+function getMultiplierColor(mult: number): string {
+  if (mult >= 2) return "#ff4444";
+  if (mult >= 1.5) return "#DD550C";
+  if (mult >= 1.25) return "#FFD700";
+  return "white";
+}
+
+// --- Types ---
+
+interface Tackler {
+  lane: number;
+  y: number;
+  wide: boolean;
+  jersey: number;
+}
+
+interface Powerup {
+  lane: number;
+  y: number;
 }
 
 interface SpeedLine {
@@ -86,7 +164,7 @@ interface SpeedLine {
 
 interface LeaderboardEntry {
   name: string;
-  yards: number;
+  score: number;
   date: string;
 }
 
@@ -111,8 +189,8 @@ function loadLeaderboard(): LeaderboardEntry[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as LeaderboardEntry[];
     return parsed
-      .filter((e) => e && typeof e.name === "string" && typeof e.yards === "number")
-      .sort((a, b) => b.yards - a.yards)
+      .filter((e) => e && typeof e.name === "string" && typeof e.score === "number")
+      .sort((a, b) => b.score - a.score)
       .slice(0, 10);
   } catch {
     return [];
@@ -122,12 +200,10 @@ function loadLeaderboard(): LeaderboardEntry[] {
 function saveToLeaderboard(entry: LeaderboardEntry): LeaderboardEntry[] {
   const existing = loadLeaderboard();
   existing.push(entry);
-  const sorted = existing.sort((a, b) => b.yards - a.yards).slice(0, 10);
+  const sorted = existing.sort((a, b) => b.score - a.score).slice(0, 10);
   try {
     localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(sorted));
-  } catch {
-    // localStorage full or unavailable
-  }
+  } catch { /* storage full */ }
   return sorted;
 }
 
@@ -137,28 +213,48 @@ export default function BreakawayGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Game state refs (mutable for animation loop)
+  // Game state refs
   const stateRef = useRef<GameState>("menu");
-  const laneRef = useRef(1); // 0, 1, 2
+  const laneRef = useRef(1);
   const yardsRef = useRef(0);
+  const scoreRef = useRef(0);
   const speedRef = useRef(INITIAL_SPEED);
   const fieldOffsetRef = useRef(0);
   const tacklersRef = useRef<Tackler[]>([]);
   const powerupsRef = useRef<Powerup[]>([]);
-  const particlesRef = useRef<Particle[]>([]);
   const speedLinesRef = useRef<SpeedLine[]>([]);
   const invincibleUntilRef = useRef(0);
   const spawnCounterRef = useRef(0);
   const frameCountRef = useRef(0);
-  const shakeRef = useRef(0);
-  const firstDownFlashRef = useRef(0);
-  const lastFirstDownRef = useRef(0);
   const animFrameRef = useRef(0);
   const scaleRef = useRef(1);
 
+  // Particle pool
+  const poolRef = useRef<PoolParticle[]>(createParticlePool());
+
+  // Screen shake (intensity + timer pattern)
+  const shakeIntensityRef = useRef(0);
+  const shakeTimerRef = useRef(0);
+  const shakeMaxTimerRef = useRef(0);
+
+  // Flash effect
+  const flashColorRef = useRef("");
+  const flashTimerRef = useRef(0);
+  const flashMaxTimerRef = useRef(0);
+
+  // Streak system
+  const streakRef = useRef(0);
+  const streakBrokenRef = useRef(false);
+  const lastFirstDownRef = useRef(0);
+  const firstDownFlashRef = useRef(0);
+
+  // Difficulty curve
+  const touchdownsRef = useRef(0);
+
   // React state for UI overlay
   const [gameState, setGameState] = useState<GameState>("menu");
-  const [_yards, setYards] = useState(0);
+  const [, setYards] = useState(0);
+  const [, setScore] = useState(0);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard());
   const [scoreSaved, setScoreSaved] = useState(false);
   const [scoreRank, setScoreRank] = useState<number | null>(null);
@@ -168,19 +264,31 @@ export default function BreakawayGame() {
   const resetGame = useCallback(() => {
     laneRef.current = 1;
     yardsRef.current = 0;
+    scoreRef.current = 0;
     speedRef.current = INITIAL_SPEED;
     fieldOffsetRef.current = 0;
     tacklersRef.current = [];
     powerupsRef.current = [];
-    particlesRef.current = [];
     speedLinesRef.current = [];
     invincibleUntilRef.current = 0;
     spawnCounterRef.current = 0;
     frameCountRef.current = 0;
-    shakeRef.current = 0;
+    shakeIntensityRef.current = 0;
+    shakeTimerRef.current = 0;
+    shakeMaxTimerRef.current = 0;
+    flashColorRef.current = "";
+    flashTimerRef.current = 0;
+    flashMaxTimerRef.current = 0;
     firstDownFlashRef.current = 0;
     lastFirstDownRef.current = 0;
+    streakRef.current = 0;
+    streakBrokenRef.current = false;
+    touchdownsRef.current = 0;
+    for (let i = 0; i < poolRef.current.length; i++) {
+      poolRef.current[i].active = false;
+    }
     setYards(0);
+    setScore(0);
     setScoreSaved(false);
     setScoreRank(null);
   }, []);
@@ -194,27 +302,37 @@ export default function BreakawayGame() {
   const endGame = useCallback(() => {
     stateRef.current = "gameover";
     setGameState("gameover");
-    shakeRef.current = 12;
+
+    // Big shake on death
+    shakeIntensityRef.current = 12;
+    shakeTimerRef.current = 18;
+    shakeMaxTimerRef.current = 18;
+
+    // Red flash
+    flashColorRef.current = "rgba(200,0,0,0.2)";
+    flashTimerRef.current = 20;
+    flashMaxTimerRef.current = 20;
 
     const finalYards = Math.floor(yardsRef.current);
+    const finalScore = scoreRef.current;
     setYards(finalYards);
+    setScore(finalScore);
 
-    // Prompt for name and save to localStorage
-    if (finalYards > 0) {
+    if (finalScore > 0) {
       const name = window.prompt(
-        `You ran ${finalYards} yards! Enter your name for the leaderboard:`
+        `You scored ${finalScore} pts (${finalYards} yds)! Enter your name for the leaderboard:`
       );
       if (name && name.trim()) {
         const entry: LeaderboardEntry = {
           name: name.trim(),
-          yards: finalYards,
+          score: finalScore,
           date: new Date().toISOString(),
         };
         const updated = saveToLeaderboard(entry);
         setLeaderboard(updated);
         setScoreSaved(true);
         const rank = updated.findIndex(
-          (e) => e.name === entry.name && e.yards === entry.yards && e.date === entry.date
+          (e) => e.name === entry.name && e.score === entry.score && e.date === entry.date
         );
         setScoreRank(rank >= 0 ? rank + 1 : null);
       }
@@ -226,6 +344,11 @@ export default function BreakawayGame() {
     const next = laneRef.current + dir;
     if (next >= 0 && next < LANE_COUNT) {
       laneRef.current = next;
+      // Trail particles on lane change
+      emitParticles(poolRef.current, 6, laneX(laneRef.current), PLAYER_Y + 10, {
+        speedMin: 0.5, speedMax: 2, lifeFrames: 15,
+        colors: TRAIL_COLORS, sizeMin: 2, sizeMax: 4,
+      });
     }
   }, []);
 
@@ -250,7 +373,6 @@ export default function BreakawayGame() {
     return () => window.removeEventListener("keydown", onKey);
   }, [moveLane, startGame]);
 
-  // Touch controls
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -275,11 +397,9 @@ export default function BreakawayGame() {
       const dx = t.clientX - touchStartX;
       const dy = t.clientY - touchStartY;
 
-      // Only register horizontal swipes (not taps)
       if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
         moveLane(dx > 0 ? 1 : -1);
       } else if (Math.abs(dx) < 15 && Math.abs(dy) < 15) {
-        // Tap: left half = left, right half = right
         const rect = canvas!.getBoundingClientRect();
         const tapX = t.clientX - rect.left;
         if (tapX < rect.width / 2) {
@@ -331,8 +451,21 @@ export default function BreakawayGame() {
     if (!ctx) return;
 
     function spawnTackler() {
+      const touchdowns = touchdownsRef.current;
+
+      // Difficulty curve: first 3 touchdowns are easy (onboarding)
+      if (touchdowns < 3) {
+        // Only spawn in one lane, never wide, never double
+        const lane = Math.floor(Math.random() * LANE_COUNT);
+        const jersey = 20 + Math.floor(Math.random() * 79);
+        tacklersRef.current.push({ lane, y: -TACKLER_H, wide: false, jersey });
+        return;
+      }
+
       const lane = Math.floor(Math.random() * LANE_COUNT);
-      const wide = Math.random() < 0.15 && speedRef.current > 4;
+      // Wide tacklers ramp in after onboarding: 0% at td=3, up to 20% at td=10+
+      const wideChance = Math.min(0.03 * (touchdowns - 2), 0.2);
+      const wide = Math.random() < wideChance && speedRef.current > 4;
       const jersey = 20 + Math.floor(Math.random() * 79);
       tacklersRef.current.push({ lane, y: -TACKLER_H, wide, jersey });
     }
@@ -340,20 +473,6 @@ export default function BreakawayGame() {
     function spawnPowerup() {
       const lane = Math.floor(Math.random() * LANE_COUNT);
       powerupsRef.current.push({ lane, y: -POWERUP_SIZE });
-    }
-
-    function addParticle(x: number, y: number) {
-      if (particlesRef.current.length >= MAX_PARTICLES) return;
-      particlesRef.current.push({
-        x,
-        y,
-        vx: (Math.random() - 0.5) * 2,
-        vy: -(Math.random() * 1.5 + 0.5),
-        life: 1,
-        maxLife: 20 + Math.random() * 15,
-        size: 2 + Math.random() * 2,
-        color: Math.random() > 0.5 ? "#4a8c3e" : "#3d7534",
-      });
     }
 
     function addSpeedLine() {
@@ -373,9 +492,17 @@ export default function BreakawayGame() {
       // --- Update ---
       if (state === "playing") {
         const speed = speedRef.current;
+        const touchdowns = touchdownsRef.current;
 
-        // Ramp difficulty
-        speedRef.current = Math.min(speed + SPEED_RAMP, MAX_SPEED);
+        // Difficulty curve: ramp speed slower during onboarding
+        let effectiveRamp = SPEED_RAMP;
+        if (touchdowns < 3) {
+          effectiveRamp = SPEED_RAMP * 0.4;
+        } else {
+          // After onboarding, ramp one dimension: speed increases faster with score
+          effectiveRamp = SPEED_RAMP * Math.min(1 + touchdowns * 0.05, 2.0);
+        }
+        speedRef.current = Math.min(speed + effectiveRamp, MAX_SPEED);
 
         // Field scroll
         fieldOffsetRef.current += speed;
@@ -385,25 +512,60 @@ export default function BreakawayGame() {
         const currentYards = Math.floor(yardsRef.current);
         if (frame % 5 === 0) setYards(currentYards);
 
-        // First down flash
+        // First down / touchdown detection (every 100 yards)
         const currentFirstDown = Math.floor(currentYards / 100);
         if (currentFirstDown > lastFirstDownRef.current && currentYards > 0) {
           firstDownFlashRef.current = 60;
           lastFirstDownRef.current = currentFirstDown;
+          touchdownsRef.current++;
+
+          // Streak: consecutive first downs count
+          streakRef.current++;
+          const mult = getStreakMultiplier(streakRef.current);
+          const basePts = 100;
+          const pts = Math.round(basePts * mult);
+          scoreRef.current += pts;
+          setScore(scoreRef.current);
+
+          // Goal scored particles (green/gold burst)
+          const playerX = laneX(laneRef.current);
+          emitParticles(poolRef.current, 60, playerX, PLAYER_Y, {
+            speedMin: 1, speedMax: 5, lifeFrames: 50,
+            colors: GOAL_COLORS, sizeMin: 2, sizeMax: 5, gravity: true,
+          });
+
+          // Screen shake on touchdown
+          shakeIntensityRef.current = 8;
+          shakeTimerRef.current = 12;
+          shakeMaxTimerRef.current = 12;
+
+          // Green flash on touchdown
+          flashColorRef.current = "rgba(0,200,0,0.15)";
+          flashTimerRef.current = 15;
+          flashMaxTimerRef.current = 15;
         }
         if (firstDownFlashRef.current > 0) firstDownFlashRef.current--;
 
-        // Spawn tacklers
-        const spawnInterval = Math.max(
-          TACKLER_SPAWN_INTERVAL_MIN,
-          TACKLER_SPAWN_INTERVAL_INIT - frame * 0.02
-        );
+        // Spawn tacklers with difficulty curve
+        let spawnInterval: number;
+        if (touchdowns < 3) {
+          // Onboarding: very generous spacing
+          spawnInterval = Math.max(80, TACKLER_SPAWN_INTERVAL_INIT + 20 - frame * 0.005);
+        } else {
+          // Post-onboarding: ramp spawn rate with touchdowns
+          const tighten = Math.min((touchdowns - 2) * 2, 20);
+          spawnInterval = Math.max(
+            TACKLER_SPAWN_INTERVAL_MIN,
+            TACKLER_SPAWN_INTERVAL_INIT - tighten - frame * 0.02
+          );
+        }
         spawnCounterRef.current++;
         if (spawnCounterRef.current >= spawnInterval) {
           spawnTackler();
           spawnCounterRef.current = 0;
-          // Occasionally spawn double
-          if (Math.random() < 0.3 && speed > 5) {
+          // Double spawns only after onboarding, rate ramps with touchdowns
+          const doubleChance = touchdowns < 3 ? 0 : Math.min(0.1 + touchdowns * 0.02, 0.4);
+          if (Math.random() < doubleChance && speed > 5) {
             spawnTackler();
           }
         }
@@ -413,9 +575,13 @@ export default function BreakawayGame() {
           spawnPowerup();
         }
 
-        // Move tacklers
+        // Move tacklers with difficulty-scaled speed
+        let tacklerSpeedMult = 1.1;
+        if (touchdowns >= 3) {
+          tacklerSpeedMult = 1.1 + Math.min((touchdowns - 2) * 0.05, 0.5);
+        }
         tacklersRef.current = tacklersRef.current.filter((t) => {
-          t.y += speed * 1.1;
+          t.y += speed * tacklerSpeedMult;
           return t.y < CANVAS_H + 50;
         });
 
@@ -437,6 +603,11 @@ export default function BreakawayGame() {
           const ppy = p.y - POWERUP_SIZE / 2;
           if (rectsOverlap(px, py, PLAYER_W, PLAYER_H, ppx, ppy, POWERUP_SIZE, POWERUP_SIZE)) {
             invincibleUntilRef.current = now + POWERUP_DURATION;
+            // Trail burst on pickup
+            emitParticles(poolRef.current, 20, laneX(p.lane), p.y, {
+              speedMin: 1, speedMax: 4, lifeFrames: 25,
+              colors: TRAIL_COLORS, sizeMin: 2, sizeMax: 4,
+            });
             return false;
           }
           return true;
@@ -454,34 +625,35 @@ export default function BreakawayGame() {
               : laneX(t.lane) - tw / 2;
             const ty = t.y - TACKLER_H / 2;
             if (rectsOverlap(px, py, PLAYER_W, PLAYER_H, tx, ty, tw, TACKLER_H)) {
+              // Collision shake
+              shakeIntensityRef.current = 12;
+              shakeTimerRef.current = 18;
+              shakeMaxTimerRef.current = 18;
+
+              // Break streak on death
+              if (streakRef.current >= 3) {
+                streakBrokenRef.current = true;
+              }
+              streakRef.current = 0;
+
               endGame();
               break;
             }
           }
         }
 
-        // Particles from runner
-        if (frame % 2 === 0) {
-          for (let i = 0; i < PARTICLE_COUNT_PER_FRAME; i++) {
-            addParticle(
-              laneX(laneRef.current) + (Math.random() - 0.5) * 10,
-              PLAYER_Y + PLAYER_H / 2
-            );
-          }
+        // Trail particles from runner at high speed
+        if (speed > 5 && frame % 3 === 0) {
+          emitParticles(poolRef.current, 2, laneX(laneRef.current), PLAYER_Y + PLAYER_H / 2, {
+            speedMin: 0.3, speedMax: 1.5, lifeFrames: 12,
+            colors: ["#4a8c3e", "#3d7534"], sizeMin: 2, sizeMax: 3,
+          });
         }
 
         // Speed lines at high speed
         if (speed > 5 && frame % 3 === 0) {
           addSpeedLine();
         }
-
-        // Update particles
-        particlesRef.current = particlesRef.current.filter((p) => {
-          p.x += p.vx;
-          p.y += p.vy + speed * 0.3;
-          p.life += 1;
-          return p.life < p.maxLife;
-        });
 
         // Update speed lines
         speedLinesRef.current = speedLinesRef.current.filter((s) => {
@@ -490,21 +662,31 @@ export default function BreakawayGame() {
         });
       }
 
-      // Shake decay
-      if (shakeRef.current > 0) shakeRef.current *= 0.85;
-      if (shakeRef.current < 0.5) shakeRef.current = 0;
+      // Update particle pool
+      updatePoolParticles(poolRef.current, true);
+
+      // Shake timer decay
+      if (shakeTimerRef.current > 0) {
+        shakeTimerRef.current--;
+      }
+
+      // Flash timer decay
+      if (flashTimerRef.current > 0) {
+        flashTimerRef.current--;
+      }
 
       // --- Draw ---
       ctx.save();
 
-      // Screen shake
-      if (shakeRef.current > 0) {
-        const sx = (Math.random() - 0.5) * shakeRef.current * 2;
-        const sy = (Math.random() - 0.5) * shakeRef.current * 2;
+      // Screen shake (intensity + timer pattern)
+      if (shakeTimerRef.current > 0) {
+        const ratio = shakeTimerRef.current / shakeMaxTimerRef.current;
+        const sx = (Math.random() * 2 - 1) * shakeIntensityRef.current * ratio;
+        const sy = (Math.random() * 2 - 1) * shakeIntensityRef.current * ratio;
         ctx.translate(sx, sy);
       }
 
-      // Field background (alternating strips)
+      // Field background
       const offset = fieldOffsetRef.current % (YARD_LINE_SPACING * 2);
       for (let y = -YARD_LINE_SPACING * 2; y < CANVAS_H + YARD_LINE_SPACING; y += YARD_LINE_SPACING) {
         const fy = y + offset;
@@ -518,7 +700,6 @@ export default function BreakawayGame() {
       ctx.fillRect(0, 0, SIDELINE_W, CANVAS_H);
       ctx.fillRect(CANVAS_W - SIDELINE_W, 0, SIDELINE_W, CANVAS_H);
 
-      // Sideline stripes
       ctx.strokeStyle = SIDELINE_COLOR;
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -534,7 +715,6 @@ export default function BreakawayGame() {
         const ly = y + yardOffset;
         if (ly < -10 || ly > CANVAS_H + 10) continue;
 
-        // Yard line
         ctx.strokeStyle = YARD_LINE_COLOR;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -542,7 +722,6 @@ export default function BreakawayGame() {
         ctx.lineTo(CANVAS_W - SIDELINE_W, ly);
         ctx.stroke();
 
-        // Hash marks
         ctx.strokeStyle = HASH_COLOR;
         ctx.lineWidth = 1;
         const hashPositions = [
@@ -556,11 +735,9 @@ export default function BreakawayGame() {
           ctx.stroke();
         }
 
-        // Yard numbers
         const totalYardLines = Math.floor(fieldOffsetRef.current / YARD_LINE_SPACING);
         const lineIndex = Math.floor((y + YARD_LINE_SPACING) / YARD_LINE_SPACING);
         const yardNum = ((totalYardLines - lineIndex + 100) % 100);
-        // Show yard numbers (10, 20, ..., 50, 40, 30, ...)
         const displayNum = yardNum % 100;
         const fieldYard = displayNum <= 50 ? displayNum : 100 - displayNum;
 
@@ -571,14 +748,12 @@ export default function BreakawayGame() {
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
 
-          // Left number
           ctx.save();
           ctx.translate(SIDELINE_W + 16, ly);
           ctx.rotate(-Math.PI / 2);
           ctx.fillText(String(fieldYard), 0, 0);
           ctx.restore();
 
-          // Right number
           ctx.save();
           ctx.translate(CANVAS_W - SIDELINE_W - 16, ly);
           ctx.rotate(Math.PI / 2);
@@ -589,7 +764,7 @@ export default function BreakawayGame() {
         }
       }
 
-      // Endzone detection (every 100 yards)
+      // Endzone detection
       const currentYds = yardsRef.current;
       const nextEndzone = Math.ceil(currentYds / 100) * 100;
       if (nextEndzone - currentYds < 80 && nextEndzone > 0) {
@@ -619,44 +794,30 @@ export default function BreakawayGame() {
         ctx.stroke();
       }
 
-      // Particles
-      for (const p of particlesRef.current) {
-        const alpha = 1 - p.life / p.maxLife;
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = alpha * 0.7;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-
       // Powerups
       for (const p of powerupsRef.current) {
-        const px = laneX(p.lane);
-        const py = p.y;
+        const ppx = laneX(p.lane);
+        const ppy = p.y;
 
-        // Glow
         ctx.save();
         ctx.shadowColor = POWERUP_COLOR;
         ctx.shadowBlur = 12;
 
-        // Football shape
         ctx.fillStyle = POWERUP_COLOR;
         ctx.beginPath();
-        ctx.ellipse(px, py, POWERUP_SIZE / 2, POWERUP_SIZE / 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(ppx, ppy, POWERUP_SIZE / 2, POWERUP_SIZE / 3, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Laces
         ctx.strokeStyle = "white";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(px, py - POWERUP_SIZE / 3 + 3);
-        ctx.lineTo(px, py + POWERUP_SIZE / 3 - 3);
+        ctx.moveTo(ppx, ppy - POWERUP_SIZE / 3 + 3);
+        ctx.lineTo(ppx, ppy + POWERUP_SIZE / 3 - 3);
         ctx.stroke();
         for (let i = -1; i <= 1; i++) {
           ctx.beginPath();
-          ctx.moveTo(px - 3, py + i * 4);
-          ctx.lineTo(px + 3, py + i * 4);
+          ctx.moveTo(ppx - 3, ppy + i * 4);
+          ctx.lineTo(ppx + 3, ppy + i * 4);
           ctx.stroke();
         }
 
@@ -676,7 +837,6 @@ export default function BreakawayGame() {
         if (!facingUp) ctx.rotate(Math.PI);
         const s = scale;
 
-        // Shadow on the ground
         ctx.fillStyle = "rgba(0,0,0,0.18)";
         ctx.beginPath();
         ctx.ellipse(0, 2 * s, 11 * s, 5 * s, 0, 0, Math.PI * 2);
@@ -687,7 +847,6 @@ export default function BreakawayGame() {
           ctx.shadowBlur = 16;
         }
 
-        // Legs (two small ovals below body, animated with frame count)
         const legPhase = (frameCountRef.current * 0.2) % (Math.PI * 2);
         const legSpread = Math.sin(legPhase) * 3 * s;
         ctx.fillStyle = "white";
@@ -698,7 +857,6 @@ export default function BreakawayGame() {
         ctx.ellipse(4 * s, 14 * s - legSpread, 3 * s, 5 * s, 0.15, 0, Math.PI * 2);
         ctx.fill();
 
-        // Shoes
         ctx.fillStyle = "#111";
         ctx.beginPath();
         ctx.ellipse(-4 * s, 18 * s + legSpread, 3 * s, 2.5 * s, 0, 0, Math.PI * 2);
@@ -707,13 +865,11 @@ export default function BreakawayGame() {
         ctx.ellipse(4 * s, 18 * s - legSpread, 3 * s, 2.5 * s, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Jersey / torso
         ctx.fillStyle = jerseyColor;
         ctx.beginPath();
         ctx.ellipse(0, 4 * s, 10 * s, 12 * s, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Shoulder pads (wider ellipse)
         ctx.fillStyle = jerseyColor;
         ctx.strokeStyle = "rgba(255,255,255,0.15)";
         ctx.lineWidth = 1;
@@ -722,7 +878,6 @@ export default function BreakawayGame() {
         ctx.fill();
         ctx.stroke();
 
-        // Arms (two small ovals to the sides, animated)
         const armSwing = Math.sin(legPhase + Math.PI) * 2 * s;
         ctx.fillStyle = jerseyColor;
         ctx.beginPath();
@@ -732,7 +887,6 @@ export default function BreakawayGame() {
         ctx.ellipse(12 * s, 2 * s - armSwing, 3.5 * s, 6 * s, -0.3, 0, Math.PI * 2);
         ctx.fill();
 
-        // Hands
         ctx.fillStyle = "#d4a574";
         ctx.beginPath();
         ctx.arc(-12 * s, 8 * s + armSwing, 2.5 * s, 0, Math.PI * 2);
@@ -741,13 +895,11 @@ export default function BreakawayGame() {
         ctx.arc(12 * s, 8 * s - armSwing, 2.5 * s, 0, Math.PI * 2);
         ctx.fill();
 
-        // Helmet
         ctx.fillStyle = helmetColor;
         ctx.beginPath();
         ctx.arc(0, -10 * s, 8 * s, 0, Math.PI * 2);
         ctx.fill();
 
-        // Facemask
         ctx.strokeStyle = "rgba(200,200,200,0.6)";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -758,7 +910,6 @@ export default function BreakawayGame() {
         ctx.lineTo(3 * s, -13 * s);
         ctx.stroke();
 
-        // Helmet stripe
         ctx.strokeStyle = "rgba(255,255,255,0.25)";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -768,7 +919,6 @@ export default function BreakawayGame() {
 
         ctx.shadowBlur = 0;
 
-        // Jersey number on back
         ctx.fillStyle = "rgba(255,255,255,0.75)";
         ctx.font = `bold ${Math.round(9 * s)}px sans-serif`;
         ctx.textAlign = "center";
@@ -799,7 +949,7 @@ export default function BreakawayGame() {
       const helmetCol = invincible ? "#fff8dc" : "#c44a0a";
       drawFootballer(playerX, PLAYER_Y, jerseyCol, helmetCol, "7", 1.1, false, playerGlow);
 
-      // Football in hand (for ball carrier)
+      // Football in hand
       if (!invincible) {
         ctx.fillStyle = "#8B4513";
         ctx.beginPath();
@@ -813,32 +963,116 @@ export default function BreakawayGame() {
         ctx.stroke();
       }
 
-      // First down flash
+      // First down flash with streak display
       if (firstDownFlashRef.current > 0) {
         const flashAlpha = firstDownFlashRef.current / 60;
         ctx.fillStyle = `rgba(221, 85, 12, ${flashAlpha * 0.15})`;
         ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
+        const rf = 60 - firstDownFlashRef.current;
+        const bounceT = rf / 60;
+        const tdScale = 1 + Math.sin(bounceT * Math.PI) * 0.2;
+
+        ctx.save();
+        ctx.translate(CANVAS_W / 2, CANVAS_H / 2 - 40);
+        ctx.scale(tdScale, tdScale);
+
+        // "FIRST DOWN!" text
+        const fadeIn = Math.min(rf / 8, 1);
+        ctx.globalAlpha = fadeIn * flashAlpha;
         ctx.font = "bold 36px sans-serif";
-        ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("FIRST DOWN!", CANVAS_W / 2, CANVAS_H / 2 - 40);
+        ctx.fillText("FIRST DOWN!", 2, 2);
+        ctx.fillStyle = "#FFD700";
+        ctx.fillText("FIRST DOWN!", 0, 0);
+
+        // Points earned
+        if (rf >= 10) {
+          const fadeIn2 = Math.min((rf - 10) / 8, 1);
+          ctx.globalAlpha = fadeIn2 * flashAlpha;
+          const mult = getStreakMultiplier(streakRef.current);
+          const pts = Math.round(100 * mult);
+          ctx.font = "bold 22px sans-serif";
+          ctx.fillStyle = mult > 1 ? getMultiplierColor(mult) : "white";
+          const ptsText = mult > 1 ? `+${pts} pts (${mult}x)` : `+${pts} pts`;
+          ctx.fillText(ptsText, 0, 40);
+        }
+
+        // Streak indicator
+        if (rf >= 18 && streakRef.current >= 3) {
+          const fadeIn3 = Math.min((rf - 18) / 8, 1);
+          ctx.globalAlpha = fadeIn3 * flashAlpha;
+          const pulse = 1 + Math.sin(frameCountRef.current * 0.1) * 0.075;
+          ctx.save();
+          ctx.scale(pulse, pulse);
+          ctx.font = "bold 18px sans-serif";
+          ctx.fillStyle = getMultiplierColor(getStreakMultiplier(streakRef.current));
+          ctx.fillText(`x${streakRef.current} STREAK!`, 0, 70);
+          ctx.restore();
+        }
+
+        ctx.restore();
+        ctx.globalAlpha = 1;
       }
 
-      // HUD: yards counter
-      if (state === "playing") {
-        ctx.fillStyle = "rgba(0,0,0,0.5)";
-        ctx.fillRect(CANVAS_W / 2 - 50, 8, 100, 30);
-        ctx.strokeStyle = "rgba(255,255,255,0.2)";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(CANVAS_W / 2 - 50, 8, 100, 30);
+      // Pool particles
+      drawPoolParticles(ctx, poolRef.current);
 
-        ctx.font = "bold 16px sans-serif";
-        ctx.fillStyle = "white";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(`${Math.floor(yardsRef.current)} YDS`, CANVAS_W / 2, 23);
+      // Flash overlay
+      if (flashTimerRef.current > 0) {
+        const flashAlpha = flashTimerRef.current / flashMaxTimerRef.current;
+        const base = flashColorRef.current.replace(/[\d.]+\)$/, `${(0.15 * flashAlpha).toFixed(3)})`);
+        ctx.fillStyle = base;
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      }
+
+      // HUD
+      if (state === "playing") {
+        // Score display (top left)
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.beginPath();
+        ctx.moveTo(14, 8);
+        ctx.lineTo(94, 8);
+        ctx.quadraticCurveTo(100, 8, 100, 14);
+        ctx.lineTo(100, 56);
+        ctx.quadraticCurveTo(100, 62, 94, 62);
+        ctx.lineTo(14, 62);
+        ctx.quadraticCurveTo(8, 62, 8, 56);
+        ctx.lineTo(8, 14);
+        ctx.quadraticCurveTo(8, 8, 14, 8);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.font = "bold 10px sans-serif";
+        ctx.fillStyle = "rgba(255,255,255,0.6)";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.fillText("SCORE", 16, 12);
+
+        ctx.font = "bold 18px sans-serif";
+        ctx.fillStyle = PLAYER_COLOR;
+        ctx.fillText(String(scoreRef.current), 16, 26);
+
+        ctx.font = "bold 10px sans-serif";
+        ctx.fillStyle = "rgba(255,255,255,0.4)";
+        ctx.fillText(`${Math.floor(yardsRef.current)} YDS`, 16, 47);
+
+        // Streak HUD (under score, only when active and not in first-down flash)
+        if (streakRef.current >= 3 && firstDownFlashRef.current <= 0) {
+          const mult = getStreakMultiplier(streakRef.current);
+          const pulse = 1 + Math.sin(frameCountRef.current * 0.1) * 0.075;
+          ctx.save();
+          ctx.translate(54, 76);
+          ctx.scale(pulse, pulse);
+          ctx.font = "bold 12px sans-serif";
+          ctx.fillStyle = getMultiplierColor(mult);
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(`x${streakRef.current} STREAK! ${mult}x`, 0, 0);
+          ctx.restore();
+        }
 
         // Invincibility timer
         if (invincible) {
@@ -866,7 +1100,6 @@ export default function BreakawayGame() {
         ctx.fillStyle = "white";
         ctx.fillText("Dodge tacklers. Run for glory.", CANVAS_W / 2, CANVAS_H / 2 - 35);
 
-        // Draw football icon
         ctx.fillStyle = PLAYER_COLOR;
         ctx.beginPath();
         ctx.ellipse(CANVAS_W / 2, CANVAS_H / 2 + 20, 25, 16, 0, 0, Math.PI * 2);
@@ -884,7 +1117,6 @@ export default function BreakawayGame() {
           ctx.stroke();
         }
 
-        // Play prompt
         const blink = Math.sin(Date.now() * 0.004) > 0;
         if (blink) {
           ctx.font = "bold 16px sans-serif";
@@ -906,22 +1138,26 @@ export default function BreakawayGame() {
         ctx.fillStyle = "#ff4444";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("FUMBLE!", CANVAS_W / 2, CANVAS_H / 2 - 70);
+        ctx.fillText("FUMBLE!", CANVAS_W / 2, CANVAS_H / 2 - 80);
 
         ctx.font = "bold 48px sans-serif";
         ctx.fillStyle = PLAYER_COLOR;
-        ctx.fillText(`${Math.floor(yardsRef.current)} YDS`, CANVAS_W / 2, CANVAS_H / 2 - 20);
+        ctx.fillText(`${scoreRef.current} PTS`, CANVAS_W / 2, CANVAS_H / 2 - 30);
 
         ctx.font = "16px sans-serif";
         ctx.fillStyle = "rgba(255,255,255,0.7)";
         const firstDowns = Math.floor(yardsRef.current / 100);
         ctx.fillText(
-          firstDowns > 0
-            ? `${firstDowns} first down${firstDowns > 1 ? "s" : ""} earned`
-            : "No first downs",
+          `${Math.floor(yardsRef.current)} yds | ${firstDowns} first down${firstDowns !== 1 ? "s" : ""}`,
           CANVAS_W / 2,
-          CANVAS_H / 2 + 20
+          CANVAS_H / 2 + 10
         );
+
+        if (streakBrokenRef.current) {
+          ctx.font = "bold 14px sans-serif";
+          ctx.fillStyle = "#ff4444";
+          ctx.fillText("STREAK BROKEN!", CANVAS_W / 2, CANVAS_H / 2 + 35);
+        }
 
         const blink = Math.sin(Date.now() * 0.004) > 0;
         if (blink) {
@@ -970,7 +1206,7 @@ export default function BreakawayGame() {
             <div className="divide-y divide-white/5">
               {leaderboard.map((entry, i) => (
                 <div
-                  key={`${entry.name}-${entry.yards}-${i}`}
+                  key={`${entry.name}-${entry.score}-${i}`}
                   className={`flex items-center gap-3 px-4 py-2.5 ${
                     scoreRank === i + 1 && scoreSaved
                       ? "bg-[#DD550C]/10"
@@ -994,7 +1230,7 @@ export default function BreakawayGame() {
                     </p>
                   </div>
                   <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#DD550C]">
-                    {entry.yards.toLocaleString()}
+                    {entry.score.toLocaleString()} pts
                   </span>
                 </div>
               ))}
