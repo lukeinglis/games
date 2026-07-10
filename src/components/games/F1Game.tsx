@@ -231,6 +231,8 @@ export default function F1Game() {
   const [started, setStarted] = useState(false);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard());
   const [bestScore, setBestScore] = useState(0);
+  const [finalBarriersPassed, setFinalBarriersPassed] = useState(0);
+  const [finalStreak, setFinalStreak] = useState(0);
 
   // Pre-rendered crowd strip (avoids hundreds of fillRect per frame)
   const crowdCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -817,6 +819,8 @@ export default function F1Game() {
       setBestScore(s.score);
     }
     setDisplayScore(s.score);
+    setFinalBarriersPassed(s.barriersPassed);
+    setFinalStreak(s.streak > 0 ? s.streak : s.barriersPassed);
     setGameOver(true);
 
     // Shake + crash particle animation after crash
@@ -1032,7 +1036,7 @@ export default function F1Game() {
             <h2 className="text-2xl font-bold mb-1 text-red-500">Race Over</h2>
             <p className="text-4xl font-bold mb-1">{displayScore}m</p>
             <p className="text-zinc-400 text-sm mb-1">
-              {stateRef.current.barriersPassed} overtakes | Best streak: {stateRef.current.streak > 0 ? stateRef.current.streak : stateRef.current.barriersPassed}
+              {finalBarriersPassed} overtakes | Best streak: {finalStreak}
             </p>
             {bestScore > 0 && bestScore > displayScore && (
               <p className="text-zinc-500 text-sm mb-2">Best: {bestScore}m</p>

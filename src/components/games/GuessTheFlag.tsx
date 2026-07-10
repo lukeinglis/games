@@ -69,7 +69,6 @@ interface Round {
 }
 
 interface DOMParticle {
-  id: number;
   x: number;
   y: number;
   vx: number;
@@ -78,10 +77,19 @@ interface DOMParticle {
   maxLife: number;
   color: string;
   size: number;
+  active: boolean;
 }
 
 const LS_KEY = "portal-flag-highscore";
 const MAX_PARTICLES = 60;
+
+function createDOMParticlePool(): DOMParticle[] {
+  const pool: DOMParticle[] = [];
+  for (let i = 0; i < MAX_PARTICLES; i++) {
+    pool.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 1, color: "#fff", size: 4, active: false });
+  }
+  return pool;
+}
 
 function getHighScore(): number {
   if (typeof window === "undefined") return 0;
@@ -181,15 +189,16 @@ export default function GuessTheFlag() {
   const [streakBroken, setStreakBroken] = useState(false);
   const [flashType, setFlashType] = useState<"" | "correct" | "wrong" | "perfect">("");
   const [shaking, setShaking] = useState(false);
-  const [particles, setParticles] = useState<DOMParticle[]>([]);
+  const [activeParticles, setActiveParticles] = useState<{ idx: number; x: number; y: number; size: number; color: string; alpha: number }[]>([]);
   const [thinkingPulse, setThinkingPulse] = useState(false);
   const [comboPopText, setComboPopText] = useState("");
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const particleIdRef = useRef(0);
+  const particlePoolRef = useRef<DOMParticle[]>(createDOMParticlePool());
   const particleFrameRef = useRef(0);
+  const particlesActiveRef = useRef(false);
   const usedCodesRef = useRef<Set<string>>(new Set());
   const streakRef = useRef(0);
   const roundStartRef = useRef(0);
@@ -212,6 +221,40 @@ export default function GuessTheFlag() {
     }
   }, []);
 
+  const startParticleLoop = useCallback(() => {
+    if (particlesActiveRef.current) return;
+    particlesActiveRef.current = true;
+
+    function tick() {
+      const pool = particlePoolRef.current;
+      let anyActive = false;
+      const snapshot: { idx: number; x: number; y: number; size: number; color: string; alpha: number }[] = [];
+      for (let i = 0; i < pool.length; i++) {
+        const p = pool[i];
+        if (!p.active) continue;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.25;
+        p.vx *= 0.97;
+        p.life--;
+        if (p.life <= 0) {
+          p.active = false;
+        } else {
+          anyActive = true;
+          snapshot.push({ idx: i, x: p.x, y: p.y, size: p.size, color: p.color, alpha: p.life / p.maxLife });
+        }
+      }
+      setActiveParticles(snapshot);
+      if (anyActive) {
+        particleFrameRef.current = requestAnimationFrame(tick);
+      } else {
+        particlesActiveRef.current = false;
+      }
+    }
+
+    particleFrameRef.current = requestAnimationFrame(tick);
+  }, []);
+
   const emitParticles = useCallback(
     (
       originX: number,
@@ -224,63 +267,32 @@ export default function GuessTheFlag() {
       const speedMax = opts?.speedMax ?? 8;
       const sizeMin = opts?.sizeMin ?? 4;
       const sizeMax = opts?.sizeMax ?? 10;
+      const pool = particlePoolRef.current;
 
-      const newParticles: DOMParticle[] = [];
-      for (let i = 0; i < count; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = speedMin + Math.random() * (speedMax - speedMin);
-        const lifeFrames = 30 + Math.floor(Math.random() * 30);
-        newParticles.push({
-          id: particleIdRef.current++,
-          x: originX,
-          y: originY,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - 3,
-          life: lifeFrames,
-          maxLife: lifeFrames,
-          color: colors[Math.floor(Math.random() * colors.length)],
-          size: sizeMin + Math.random() * (sizeMax - sizeMin),
-        });
+      let emitted = 0;
+      for (let i = 0; i < pool.length && emitted < count; i++) {
+        if (!pool[i].active) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = speedMin + Math.random() * (speedMax - speedMin);
+          const lifeFrames = 30 + Math.floor(Math.random() * 30);
+          pool[i].x = originX;
+          pool[i].y = originY;
+          pool[i].vx = Math.cos(angle) * speed;
+          pool[i].vy = Math.sin(angle) * speed - 3;
+          pool[i].life = lifeFrames;
+          pool[i].maxLife = lifeFrames;
+          pool[i].color = colors[Math.floor(Math.random() * colors.length)];
+          pool[i].size = sizeMin + Math.random() * (sizeMax - sizeMin);
+          pool[i].active = true;
+          emitted++;
+        }
       }
 
-      setParticles((prev) => {
-        const combined = [...prev, ...newParticles];
-        if (combined.length > MAX_PARTICLES) {
-          return combined.slice(combined.length - MAX_PARTICLES);
-        }
-        return combined;
-      });
+      startParticleLoop();
     },
-    [],
+    [startParticleLoop],
   );
 
-  useEffect(() => {
-    if (particles.length === 0) return;
-
-    function tick() {
-      setParticles((prev) => {
-        const next: DOMParticle[] = [];
-        for (const p of prev) {
-          const np = { ...p };
-          np.x += np.vx;
-          np.y += np.vy;
-          np.vy += 0.25;
-          np.vx *= 0.97;
-          np.life--;
-          if (np.life > 0) next.push(np);
-        }
-        return next;
-      });
-      if (particles.length > 0) {
-        particleFrameRef.current = requestAnimationFrame(tick);
-      }
-    }
-
-    particleFrameRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (particleFrameRef.current) cancelAnimationFrame(particleFrameRef.current);
-    };
-  }, [particles.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const triggerFlash = useCallback((type: "correct" | "wrong" | "perfect") => {
     setFlashType(type);
@@ -327,7 +339,10 @@ export default function GuessTheFlag() {
     setGameState("playing");
     setSelectedAnswer(null);
     setIsNewHighScore(false);
-    setParticles([]);
+    for (let i = 0; i < particlePoolRef.current.length; i++) particlePoolRef.current[i].active = false;
+    particlesActiveRef.current = false;
+    if (particleFrameRef.current) cancelAnimationFrame(particleFrameRef.current);
+    setActiveParticles([]);
     setFlashType("");
     setComboPopText("");
     startTimeRef.current = Date.now();
@@ -455,24 +470,21 @@ export default function GuessTheFlag() {
     <div className="relative w-full max-w-lg mx-auto" ref={gameAreaRef}>
       {/* Particle layer */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden z-30">
-        {particles.map((p) => {
-          const alpha = p.life / p.maxLife;
-          return (
-            <div
-              key={p.id}
-              className="absolute rounded-full"
-              style={{
-                left: p.x,
-                top: p.y,
-                width: p.size,
-                height: p.size,
-                backgroundColor: p.color,
-                opacity: alpha,
-                transform: `translate(-50%, -50%)`,
-              }}
-            />
-          );
-        })}
+        {activeParticles.map((p) => (
+          <div
+            key={p.idx}
+            className="absolute rounded-full"
+            style={{
+              left: p.x,
+              top: p.y,
+              width: p.size,
+              height: p.size,
+              backgroundColor: p.color,
+              opacity: p.alpha,
+              transform: `translate(-50%, -50%)`,
+            }}
+          />
+        ))}
       </div>
 
       {/* Flash overlay */}
