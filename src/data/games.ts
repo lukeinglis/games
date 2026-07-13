@@ -52,7 +52,7 @@ export const games: Game[] = [
     emoji: "⚽",
     thumbnail: "/thumbnails/penalty-kick.png",
     url: "/games/penalty-kick",
-    featured: true,
+    featured: false,
   },
   {
     slug: "field-goal",
@@ -76,7 +76,7 @@ export const games: Game[] = [
     emoji: "🏴",
     thumbnail: "/thumbnails/guess-the-flag.png",
     url: "/games/guess-the-flag",
-    featured: true,
+    featured: false,
   },
   {
     slug: "gradient-descent",
@@ -87,7 +87,7 @@ export const games: Game[] = [
     color: "#00BCD4",
     emoji: "📉",
     url: "/games/gradient-descent",
-    featured: true,
+    featured: false,
     hot: true,
   },
   {
@@ -99,7 +99,7 @@ export const games: Game[] = [
     color: "#00BFA5",
     emoji: "📈",
     url: "/games/overfit",
-    featured: true,
+    featured: false,
   },
   {
     slug: "token-blitz",
@@ -110,7 +110,7 @@ export const games: Game[] = [
     color: "#6366F1",
     emoji: "🔤",
     url: "/games/token-blitz",
-    featured: true,
+    featured: false,
   },
   {
     slug: "wiki-race",

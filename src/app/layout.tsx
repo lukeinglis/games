@@ -55,9 +55,9 @@ export default function RootLayout({
 
         <div className="ticker-tape py-1">
           <div className="animate-marquee inline-block">
-            <span className="font-heading text-[8px] text-navy font-bold tracking-wider">
-              &nbsp;&nbsp;🔥 NEW: F1 Racer &nbsp;&nbsp;⚽ Penalty Kick &nbsp;&nbsp;🏈 Breakaway &nbsp;&nbsp;🏴 Guess the Flag &nbsp;&nbsp;🏈 Field Goal Frenzy &nbsp;&nbsp;🏎️ F1 Racer &nbsp;&nbsp;
-              🔥 NEW: F1 Racer &nbsp;&nbsp;⚽ Penalty Kick &nbsp;&nbsp;🏈 Breakaway &nbsp;&nbsp;🏴 Guess the Flag &nbsp;&nbsp;🏈 Field Goal Frenzy &nbsp;&nbsp;🏎️ F1 Racer &nbsp;&nbsp;
+            <span className="font-heading text-[10px] text-navy font-bold tracking-wider">
+              &nbsp;&nbsp;🔥 NEW: <Link href="/games/f1-racer" className="hover:underline">F1 Racer</Link> &nbsp;&nbsp;⚽ <Link href="/games/penalty-kick" className="hover:underline">Penalty Kick</Link> &nbsp;&nbsp;🏈 <Link href="/games/breakaway" className="hover:underline">Breakaway</Link> &nbsp;&nbsp;🏴 <Link href="/games/guess-the-flag" className="hover:underline">Guess the Flag</Link> &nbsp;&nbsp;🏈 <Link href="/games/field-goal" className="hover:underline">Field Goal Frenzy</Link> &nbsp;&nbsp;🏎️ <Link href="/games/f1-racer" className="hover:underline">F1 Racer</Link> &nbsp;&nbsp;
+              🔥 NEW: <Link href="/games/f1-racer" className="hover:underline">F1 Racer</Link> &nbsp;&nbsp;⚽ <Link href="/games/penalty-kick" className="hover:underline">Penalty Kick</Link> &nbsp;&nbsp;🏈 <Link href="/games/breakaway" className="hover:underline">Breakaway</Link> &nbsp;&nbsp;🏴 <Link href="/games/guess-the-flag" className="hover:underline">Guess the Flag</Link> &nbsp;&nbsp;🏈 <Link href="/games/field-goal" className="hover:underline">Field Goal Frenzy</Link> &nbsp;&nbsp;🏎️ <Link href="/games/f1-racer" className="hover:underline">F1 Racer</Link> &nbsp;&nbsp;
             </span>
           </div>
         </div>

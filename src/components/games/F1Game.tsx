@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createParticlePool, emitParticles, updateParticles, drawParticles, getStreakMultiplier, getMultiplierColor, type Particle } from "@/lib/game-utils";
+import { loadLeaderboard, saveToLeaderboard, type LeaderboardEntry } from "@/lib/game-leaderboard";
 
 // ── Team colors for barriers ──
 const TEAM_PALETTE = [
@@ -70,122 +72,6 @@ interface Barrier {
   raceName: string;
   scored: boolean;
 }
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  maxLife: number;
-  size: number;
-  color: string;
-  active: boolean;
-}
-
-function createParticlePool(): Particle[] {
-  const pool: Particle[] = [];
-  for (let i = 0; i < MAX_PARTICLES; i++) {
-    pool.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 1, size: 2, color: "#fff", active: false });
-  }
-  return pool;
-}
-
-function emitParticles(
-  pool: Particle[], count: number, x: number, y: number,
-  opts: { speedMin: number; speedMax: number; lifeFrames: number; colors: string[]; sizeMin: number; sizeMax: number; dirMin?: number; dirMax?: number },
-) {
-  let emitted = 0;
-  for (let i = 0; i < pool.length && emitted < count; i++) {
-    if (!pool[i].active) {
-      const dirMin = opts.dirMin ?? 0;
-      const dirMax = opts.dirMax ?? Math.PI * 2;
-      const angle = dirMin + Math.random() * (dirMax - dirMin);
-      const speed = opts.speedMin + Math.random() * (opts.speedMax - opts.speedMin);
-      pool[i].x = x;
-      pool[i].y = y;
-      pool[i].vx = Math.cos(angle) * speed;
-      pool[i].vy = Math.sin(angle) * speed;
-      pool[i].life = opts.lifeFrames;
-      pool[i].maxLife = opts.lifeFrames;
-      pool[i].color = opts.colors[Math.floor(Math.random() * opts.colors.length)];
-      pool[i].size = opts.sizeMin + Math.random() * (opts.sizeMax - opts.sizeMin);
-      pool[i].active = true;
-      emitted++;
-    }
-  }
-}
-
-function updateParticlePool(pool: Particle[], dt: number) {
-  for (let i = 0; i < pool.length; i++) {
-    const p = pool[i];
-    if (!p.active) continue;
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
-    p.vx *= 0.97;
-    p.vy *= 0.97;
-    p.life -= dt;
-    if (p.life <= 0) p.active = false;
-  }
-}
-
-function drawParticlePool(ctx: CanvasRenderingContext2D, pool: Particle[]) {
-  for (let i = 0; i < pool.length; i++) {
-    const p = pool[i];
-    if (!p.active) continue;
-    const alpha = p.life / p.maxLife;
-    ctx.globalAlpha = alpha * alpha;
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-}
-
-function getStreakMultiplier(streak: number): number {
-  if (streak >= 10) return 3;
-  if (streak >= 7) return 2;
-  if (streak >= 5) return 1.5;
-  if (streak >= 3) return 1.25;
-  return 1;
-}
-
-function getMultiplierColor(mult: number): string {
-  if (mult >= 2) return "#ff4444";
-  if (mult >= 1.5) return "#FF8000";
-  if (mult >= 1.25) return "#FFD700";
-  return "white";
-}
-interface LeaderboardEntry {
-  name: string;
-  score: number;
-  date: string;
-}
-
-function loadLeaderboard(): LeaderboardEntry[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as LeaderboardEntry[];
-    return parsed
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
-  } catch {
-    return [];
-  }
-}
-
-function saveToLeaderboard(name: string, score: number): LeaderboardEntry[] {
-  const entries = loadLeaderboard();
-  entries.push({ name, score, date: new Date().toISOString() });
-  const sorted = entries.sort((a, b) => b.score - a.score).slice(0, 10);
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sorted));
-  } catch {
-    /* storage full or unavailable */
-  }
-  return sorted;
-}
 
 export default function F1Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -229,10 +115,12 @@ export default function F1Game() {
   const [displayScore, setDisplayScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [started, setStarted] = useState(false);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard());
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard(STORAGE_KEY));
   const [bestScore, setBestScore] = useState(0);
   const [finalBarriersPassed, setFinalBarriersPassed] = useState(0);
   const [finalStreak, setFinalStreak] = useState(0);
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [playerName, setPlayerName] = useState("");
 
   // Pre-rendered crowd strip (avoids hundreds of fillRect per frame)
   const crowdCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -494,7 +382,7 @@ export default function F1Game() {
       drawRacingLine(ctx, racingLinePoints);
 
       // ── Particles (fixed pool) ──
-      drawParticlePool(ctx, s.particles);
+      drawParticles(ctx, s.particles);
 
       // ── Barriers ──
       const playTop = trackTop;
@@ -710,7 +598,7 @@ export default function F1Game() {
         dirMin: Math.PI * 0.6, dirMax: Math.PI * 1.4,
       });
     }
-    updateParticlePool(s.particles, dt);
+    updateParticles(s.particles);
 
     // ── Collision: top/bottom walls ──
     if (s.carY - CAR_H / 2 < playTop || s.carY + CAR_H / 2 > playBot) {
@@ -832,7 +720,7 @@ export default function F1Game() {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       const now = performance.now();
-      updateParticlePool(s.particles, 1);
+      updateParticles(s.particles);
       if (s.flashTimer > 0) s.flashTimer -= 1;
       if (now >= shakeEnd) {
         renderFrame(ctx, s);
@@ -855,15 +743,18 @@ export default function F1Game() {
 
     cancelAnimationFrame(animRef.current);
 
-    // Save score to localStorage
     if (s.score > 0) {
-      const name = window.prompt(`You scored ${s.score}m! Enter your name for the leaderboard:`);
-      if (name && name.trim()) {
-        const updated = saveToLeaderboard(name.trim(), s.score);
-        setLeaderboard(updated);
-      }
+      setShowNameInput(true);
     }
   }, [renderFrame]);
+
+  const handleSaveScore = useCallback(() => {
+    const name = playerName.trim() || "Anonymous";
+    const finalScore = stateRef.current.score;
+    saveToLeaderboard(STORAGE_KEY, name, finalScore);
+    setLeaderboard(loadLeaderboard(STORAGE_KEY));
+    setShowNameInput(false);
+  }, [playerName]);
 
   useEffect(() => {
     endGameRef.current = endGame;
@@ -897,6 +788,8 @@ export default function F1Game() {
 
     setGameOver(false);
     setStarted(true);
+    setShowNameInput(false);
+    setPlayerName("");
 
     cancelAnimationFrame(animRef.current);
     animRef.current = requestAnimationFrame(gameLoopRef.current);
@@ -911,7 +804,7 @@ export default function F1Game() {
           startGame();
           return;
         }
-        if (stateRef.current.gameOver) {
+        if (stateRef.current.gameOver && !showNameInput) {
           startGame();
           return;
         }
@@ -929,7 +822,7 @@ export default function F1Game() {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [startGame]);
+  }, [startGame, showNameInput]);
 
   // ── Pointer (mouse/touch) input ──
   // Track a single pointer to prevent multi-touch exploits on mobile.
@@ -1045,6 +938,26 @@ export default function F1Game() {
               <p className="text-amber-400 text-sm mb-2 font-semibold">
                 New personal best!
               </p>
+            )}
+            {showNameInput && (
+              <div className="flex items-center justify-center gap-2 max-w-xs mx-auto mt-3">
+                <input
+                  type="text"
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSaveScore()}
+                  placeholder="Your name"
+                  maxLength={20}
+                  className="flex-1 bg-[#0d1b2a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+                  autoFocus
+                />
+                <button
+                  onClick={handleSaveScore}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold uppercase tracking-wide rounded-lg transition-colors"
+                >
+                  Save
+                </button>
+              </div>
             )}
             <button
               onClick={startGame}

@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createParticlePool, emitParticles, updateParticles, drawParticles, type Particle } from "@/lib/game-utils";
+import { loadLeaderboard, saveToLeaderboard, type LeaderboardEntry } from "@/lib/game-leaderboard";
 
 // ============================================================
 // Overfit!  A bias-variance tradeoff game
@@ -34,78 +36,6 @@ const TEAL = "#00BFA5";
 const PINK = "#ff6ec7";
 const RED = "#ff4444";
 const GREEN = "#00e676";
-
-// --- Particle pool ---
-const MAX_PARTICLES = 120;
-
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  maxLife: number;
-  color: string;
-  size: number;
-  active: boolean;
-}
-
-function createParticlePool(): Particle[] {
-  const pool: Particle[] = [];
-  for (let i = 0; i < MAX_PARTICLES; i++) {
-    pool.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0, color: "#fff", size: 2, active: false });
-  }
-  return pool;
-}
-
-function emitParticles(
-  pool: Particle[], count: number,
-  x: number, y: number,
-  opts: { speedMin: number; speedMax: number; lifeFrames: number; colors: string[]; sizeMin: number; sizeMax: number },
-) {
-  let emitted = 0;
-  for (let i = 0; i < pool.length && emitted < count; i++) {
-    if (!pool[i].active) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = opts.speedMin + Math.random() * (opts.speedMax - opts.speedMin);
-      pool[i].x = x;
-      pool[i].y = y;
-      pool[i].vx = Math.cos(angle) * speed;
-      pool[i].vy = Math.sin(angle) * speed - 1.5;
-      pool[i].life = opts.lifeFrames;
-      pool[i].maxLife = opts.lifeFrames;
-      pool[i].color = opts.colors[Math.floor(Math.random() * opts.colors.length)];
-      pool[i].size = opts.sizeMin + Math.random() * (opts.sizeMax - opts.sizeMin);
-      pool[i].active = true;
-      emitted++;
-    }
-  }
-}
-
-function updateParticles(pool: Particle[]) {
-  for (let i = 0; i < pool.length; i++) {
-    const p = pool[i];
-    if (!p.active) continue;
-    p.x += p.vx;
-    p.y += p.vy;
-    p.vy += 0.08;
-    p.vx *= 0.98;
-    p.life--;
-    if (p.life <= 0) p.active = false;
-  }
-}
-
-function drawParticles(ctx: CanvasRenderingContext2D, pool: Particle[]) {
-  for (let i = 0; i < pool.length; i++) {
-    const p = pool[i];
-    if (!p.active) continue;
-    const alpha = p.life / p.maxLife;
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
-  }
-  ctx.globalAlpha = 1;
-}
 
 // --- True function generators ---
 type TrueFunction = (x: number) => number;
@@ -297,46 +227,7 @@ function getMultiplierColor(mult: number): string {
   return "white";
 }
 
-// --- Leaderboard ---
-interface LeaderboardEntry {
-  name: string;
-  score: number;
-  date: string;
-}
-
 const STORAGE_KEY = "portal-overfit-scores";
-
-function loadLeaderboard(): LeaderboardEntry[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(
-        (e: unknown): e is LeaderboardEntry =>
-          typeof e === "object" &&
-          e !== null &&
-          typeof (e as LeaderboardEntry).name === "string" &&
-          typeof (e as LeaderboardEntry).score === "number" &&
-          isFinite((e as LeaderboardEntry).score),
-      )
-      .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.score - a.score)
-      .slice(0, 10);
-  } catch {
-    return [];
-  }
-}
-
-function saveToLeaderboard(name: string, score: number) {
-  const entries = loadLeaderboard();
-  entries.push({ name, score, date: new Date().toISOString() });
-  entries.sort((a, b) => b.score - a.score);
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, 10)));
-  } catch { /* storage full */ }
-}
 
 // --- Types ---
 type GamePhase = "menu" | "drawing" | "scored" | "gameover";
@@ -406,7 +297,10 @@ export default function OverfitGame() {
   // React state for overlay UI
   const [gamePhase, setGamePhase] = useState<GamePhase>("menu");
   const [displayScore, setDisplayScore] = useState(0);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard());
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard(STORAGE_KEY));
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [playerName, setPlayerName] = useState("");
+  const showNameInputRef = useRef(false);
 
   // --- Setup a new round ---
   const setupRound = useCallback(() => {
@@ -431,6 +325,9 @@ export default function OverfitGame() {
     streakRef.current = 0;
     seedRef.current = Date.now();
     setDisplayScore(0);
+    setShowNameInput(false);
+    showNameInputRef.current = false;
+    setPlayerName("");
     for (let i = 0; i < particlesRef.current.length; i++) {
       particlesRef.current[i].active = false;
     }
@@ -505,13 +402,19 @@ export default function OverfitGame() {
 
     const finalScore = totalScoreRef.current;
     if (finalScore > 0) {
-      const name = window.prompt(`You scored ${finalScore} pts! Enter your name for the leaderboard:`);
-      if (name && name.trim()) {
-        saveToLeaderboard(name.trim(), finalScore);
-        setLeaderboard(loadLeaderboard());
-      }
+      setShowNameInput(true);
+      showNameInputRef.current = true;
     }
   }, []);
+
+  const handleSaveScore = useCallback(() => {
+    const name = playerName.trim() || "Anonymous";
+    const finalScore = totalScoreRef.current;
+    saveToLeaderboard(STORAGE_KEY, name, finalScore);
+    setLeaderboard(loadLeaderboard(STORAGE_KEY));
+    setShowNameInput(false);
+    showNameInputRef.current = false;
+  }, [playerName]);
 
   // --- Drawing input handlers ---
   useEffect(() => {
@@ -1059,7 +962,7 @@ export default function OverfitGame() {
 
     function onClick() {
       const phase = phaseRef.current;
-      if (phase === "menu" || phase === "gameover") {
+      if (phase === "menu" || (phase === "gameover" && !showNameInputRef.current)) {
         startGame();
       }
     }
@@ -1074,7 +977,7 @@ export default function OverfitGame() {
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
         const phase = phaseRef.current;
-        if (phase === "menu" || phase === "gameover") {
+        if (phase === "menu" || (phase === "gameover" && !showNameInputRef.current)) {
           startGame();
         }
       }
@@ -1118,6 +1021,27 @@ export default function OverfitGame() {
         {gamePhase === "scored" && (
           <div className="text-sm text-gray-400 font-mono">
             Next round in a moment...
+          </div>
+        )}
+
+        {gamePhase === "gameover" && showNameInput && (
+          <div className="flex items-center justify-center gap-2 max-w-xs mx-auto mt-3">
+            <input
+              type="text"
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSaveScore()}
+              placeholder="Your name"
+              maxLength={20}
+              className="flex-1 bg-[#0d1b2a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+              autoFocus
+            />
+            <button
+              onClick={handleSaveScore}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold uppercase tracking-wide rounded-lg transition-colors"
+            >
+              Save
+            </button>
           </div>
         )}
 

@@ -4,9 +4,13 @@ import Link from "next/link";
 
 export default function GamePageWrapper({
   title,
+  description,
+  controls,
   children,
 }: {
   title: string;
+  description?: string;
+  controls?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -26,6 +30,16 @@ export default function GamePageWrapper({
           {title}
         </h1>
       </div>
+
+      {(description || controls) && (
+        <div className="flex items-start gap-3 mb-4 rounded-lg border border-white/5 bg-white/[0.02] px-4 py-3">
+          <span className="text-base mt-0.5 shrink-0">ℹ️</span>
+          <div className="text-sm text-gray-400 space-y-1">
+            {description && <p>{description}</p>}
+            {controls && <p className="text-gray-500 text-xs">{controls}</p>}
+          </div>
+        </div>
+      )}
 
       {children}
     </div>

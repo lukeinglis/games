@@ -16,7 +16,7 @@ export function GameCard({ game }: { game: Game }) {
   const card = (
     <div className="group relative rounded-lg border border-navy-lighter bg-navy-light/80 hover:border-gold/60 transition-all duration-200 hover:translate-y-[-2px] overflow-hidden cursor-pointer">
       {game.hot && (
-        <div className="absolute top-2 right-2 z-10 bg-action-red text-white text-[9px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider animate-pulse-glow">
+        <div className="absolute top-2 right-2 z-10 bg-action-red text-white text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider animate-pulse-glow">
           HOT
         </div>
       )}
@@ -55,7 +55,7 @@ export function GameCard({ game }: { game: Game }) {
         </p>
 
         <div className="flex items-center justify-between">
-          <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm border ${categoryColors[game.category] ?? "bg-sports-blue/20 text-sports-blue border-sports-blue/40"}`}>
+          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm border ${categoryColors[game.category] ?? "bg-sports-blue/20 text-sports-blue border-sports-blue/40"}`}>
             {game.category}
           </span>
           <span className="text-[10px] font-bold uppercase tracking-wider text-gold/70 group-hover:text-gold transition-colors">
