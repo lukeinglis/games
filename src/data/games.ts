@@ -113,6 +113,18 @@ export const games: Game[] = [
     featured: true,
   },
   {
+    slug: "wiki-race",
+    title: "Wiki Race",
+    tagline: "Wikipedia speedrun",
+    description: "Spin the wheels, get two random articles, then race from start to target using only Wikipedia links.",
+    category: "Trivia",
+    color: "#3B82F6",
+    emoji: "📖",
+    url: "/games/wiki-race",
+    featured: true,
+    hot: true,
+  },
+  {
     slug: "hallucination-hunter",
     title: "Hallucination Hunter",
     tagline: "Spot the fakes",
