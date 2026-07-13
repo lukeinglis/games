@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { getStreakMultiplier } from "@/lib/game-utils";
 
 interface Team {
   code: string;
@@ -124,14 +125,6 @@ function shuffle<T>(arr: T[]): T[] {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
-}
-
-function getStreakMultiplier(streak: number): number {
-  if (streak >= 10) return 3;
-  if (streak >= 7) return 2;
-  if (streak >= 5) return 1.5;
-  if (streak >= 3) return 1.25;
-  return 1;
 }
 
 function getStreakLabel(streak: number): string {

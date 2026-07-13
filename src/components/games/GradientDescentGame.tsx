@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createParticlePool, emitParticles, updateParticles, drawParticles, getStreakMultiplier, getMultiplierColor, type Particle } from "@/lib/game-utils";
+import { loadLeaderboard, saveToLeaderboard, type LeaderboardEntry } from "@/lib/game-leaderboard";
 
 // ============================================================
 // Gradient Descent: A physics marble game
@@ -28,9 +30,6 @@ const SETTLE_FRAMES = 90;
 const MAX_LIVES = 3;
 const MAX_NUDGES_PER_LEVEL = 50;
 
-// --- Particle pool ---
-const MAX_PARTICLES = 120;
-
 // --- Colors ---
 const BG_COLOR = "#0a0e1a";
 const BALL_GLOW = "#00ffcc";
@@ -38,18 +37,6 @@ const BALL_FILL = "#ffffff";
 
 // --- Types ---
 type GamePhase = "menu" | "playing" | "levelComplete" | "dead" | "gameover";
-
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  maxLife: number;
-  color: string;
-  size: number;
-  active: boolean;
-}
 
 interface TerrainData {
   heights: Float64Array;
@@ -59,106 +46,7 @@ interface TerrainData {
   localMinima: { x: number; y: number }[];
 }
 
-interface LeaderboardEntry {
-  name: string;
-  score: number;
-  date: string;
-}
-
 const STORAGE_KEY = "portal-gradient-scores";
-
-function loadLeaderboard(): LeaderboardEntry[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(
-        (e: unknown): e is LeaderboardEntry =>
-          typeof e === "object" &&
-          e !== null &&
-          typeof (e as LeaderboardEntry).name === "string" &&
-          typeof (e as LeaderboardEntry).score === "number" &&
-          isFinite((e as LeaderboardEntry).score),
-      )
-      .sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.score - a.score)
-      .slice(0, 10);
-  } catch {
-    return [];
-  }
-}
-
-function saveToLeaderboard(name: string, score: number) {
-  const entries = loadLeaderboard();
-  entries.push({ name, score, date: new Date().toISOString() });
-  entries.sort((a, b) => b.score - a.score);
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries.slice(0, 10)));
-  } catch { /* storage full */ }
-}
-
-// --- Particle helpers ---
-
-function createParticlePool(): Particle[] {
-  const pool: Particle[] = [];
-  for (let i = 0; i < MAX_PARTICLES; i++) {
-    pool.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0, color: "#fff", size: 2, active: false });
-  }
-  return pool;
-}
-
-function emitParticles(
-  pool: Particle[], count: number,
-  x: number, y: number,
-  opts: { speedMin: number; speedMax: number; lifeFrames: number; colors: string[]; sizeMin: number; sizeMax: number },
-) {
-  let emitted = 0;
-  for (let i = 0; i < pool.length && emitted < count; i++) {
-    if (!pool[i].active) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = opts.speedMin + Math.random() * (opts.speedMax - opts.speedMin);
-      pool[i].x = x;
-      pool[i].y = y;
-      pool[i].vx = Math.cos(angle) * speed;
-      pool[i].vy = Math.sin(angle) * speed;
-      pool[i].life = opts.lifeFrames;
-      pool[i].maxLife = opts.lifeFrames;
-      pool[i].color = opts.colors[Math.floor(Math.random() * opts.colors.length)];
-      pool[i].size = opts.sizeMin + Math.random() * (opts.sizeMax - opts.sizeMin);
-      pool[i].active = true;
-      emitted++;
-    }
-  }
-}
-
-function updateParticles(pool: Particle[]) {
-  for (let i = 0; i < pool.length; i++) {
-    const p = pool[i];
-    if (!p.active) continue;
-    p.x += p.vx;
-    p.y += p.vy;
-    p.vx *= 0.97;
-    p.vy *= 0.97;
-    p.life--;
-    if (p.life <= 0) p.active = false;
-  }
-}
-
-function drawParticles(ctx: CanvasRenderingContext2D, pool: Particle[]) {
-  for (let i = 0; i < pool.length; i++) {
-    const p = pool[i];
-    if (!p.active) continue;
-    const alpha = p.life / p.maxLife;
-    ctx.globalAlpha = alpha * 0.8;
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-}
 
 // --- Terrain generation ---
 
@@ -299,22 +187,6 @@ function heightToColor(h: number, minH: number, maxH: number): string {
   );
   const b = Math.floor(t < 0.4 ? 200 - t * 2.5 * 150 : 50 - (t - 0.4) * 50);
   return `rgb(${r},${g},${b})`;
-}
-
-// --- Streak multiplier ---
-function getStreakMultiplier(streak: number): number {
-  if (streak >= 10) return 3;
-  if (streak >= 7) return 2;
-  if (streak >= 5) return 1.5;
-  if (streak >= 3) return 1.25;
-  return 1;
-}
-
-function getMultiplierColor(mult: number): string {
-  if (mult >= 2) return "#ff4444";
-  if (mult >= 1.5) return "#ff8800";
-  if (mult >= 1.25) return "#FFD700";
-  return "white";
 }
 
 // Pre-render the terrain to an offscreen canvas
@@ -461,7 +333,10 @@ export default function GradientDescentGame() {
 
   // React state for overlay UI
   const [, setGamePhase] = useState<GamePhase>("menu");
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard());
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard(STORAGE_KEY));
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [playerName, setPlayerName] = useState("");
+  const showNameInputRef = useRef(false);
 
   // --- Terrain + level setup ---
 
@@ -522,6 +397,9 @@ export default function GradientDescentGame() {
     flashTimerRef.current = 0;
     levelCompleteTimerRef.current = 0;
     deathTimerRef.current = 0;
+    setShowNameInput(false);
+    showNameInputRef.current = false;
+    setPlayerName("");
 
     setupLevel(1);
     phaseRef.current = "playing";
@@ -534,19 +412,25 @@ export default function GradientDescentGame() {
 
     const finalScore = scoreRef.current;
     if (finalScore > 0) {
-      const name = window.prompt(`You scored ${finalScore} pts! Enter your name for the leaderboard:`);
-      if (name && name.trim()) {
-        saveToLeaderboard(name.trim(), finalScore);
-        setLeaderboard(loadLeaderboard());
-      }
+      setShowNameInput(true);
+      showNameInputRef.current = true;
     }
   }, []);
+
+  const handleSaveScore = useCallback(() => {
+    const name = playerName.trim() || "Anonymous";
+    const finalScore = scoreRef.current;
+    saveToLeaderboard(STORAGE_KEY, name, finalScore);
+    setLeaderboard(loadLeaderboard(STORAGE_KEY));
+    setShowNameInput(false);
+    showNameInputRef.current = false;
+  }, [playerName]);
 
   // --- Input: nudge ball toward click/tap point ---
 
   const handleCanvasInput = useCallback((canvasX: number, canvasY: number) => {
     const phase = phaseRef.current;
-    if (phase === "menu" || phase === "gameover") {
+    if (phase === "menu" || (phase === "gameover" && !showNameInputRef.current)) {
       startGame();
       return;
     }
@@ -623,7 +507,7 @@ export default function GradientDescentGame() {
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
         const phase = phaseRef.current;
-        if (phase === "menu" || phase === "gameover") {
+        if (phase === "menu" || (phase === "gameover" && !showNameInputRef.current)) {
           startGame();
         }
       }
@@ -1227,7 +1111,7 @@ export default function GradientDescentGame() {
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
       {/* Game canvas */}
-      <div ref={containerRef} className="flex-1 flex justify-center">
+      <div ref={containerRef} className="flex-1 flex flex-col items-center">
         <canvas
           ref={canvasRef}
           width={CANVAS_W}
@@ -1235,6 +1119,26 @@ export default function GradientDescentGame() {
           className="rounded-xl border-2 border-white/10 shadow-2xl shadow-black/50 cursor-pointer touch-none"
           style={{ imageRendering: "auto" }}
         />
+        {showNameInput && (
+          <div className="flex items-center justify-center gap-2 max-w-xs mx-auto mt-3">
+            <input
+              type="text"
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSaveScore()}
+              placeholder="Your name"
+              maxLength={20}
+              className="flex-1 bg-[#0d1b2a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+              autoFocus
+            />
+            <button
+              onClick={handleSaveScore}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold uppercase tracking-wide rounded-lg transition-colors"
+            >
+              Save
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Leaderboard */}

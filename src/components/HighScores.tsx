@@ -134,7 +134,7 @@ export default function HighScores() {
                   {entry.score.toLocaleString()}
                 </span>
                 {entry.date && (
-                  <span className="text-[9px] text-gray-600">
+                  <span className="text-[10px] text-gray-600">
                     {formatDate(entry.date)}
                   </span>
                 )}

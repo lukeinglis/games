@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createParticlePool, emitParticles, updateParticles, drawParticles, getStreakMultiplier, getMultiplierColor, type Particle } from "@/lib/game-utils";
+import { loadLeaderboard, saveToLeaderboard, type LeaderboardEntry } from "@/lib/game-leaderboard";
 
 // ============================================================
 // Breakaway: A Subway-Surfer-style football mini game
@@ -49,97 +51,8 @@ const YARD_LINE_SPACING = 60;
 
 const LOCALSTORAGE_KEY = "portal-breakaway-scores";
 
-// --- Particle pool ---
-
-const MAX_POOL_PARTICLES = 120;
 const GOAL_COLORS = ["#00cc44", "#FFD700", "#ffffff"];
 const TRAIL_COLORS = ["#DD550C", "#FFD700"];
-
-interface PoolParticle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  maxLife: number;
-  size: number;
-  color: string;
-  active: boolean;
-}
-
-function createParticlePool(): PoolParticle[] {
-  const pool: PoolParticle[] = [];
-  for (let i = 0; i < MAX_POOL_PARTICLES; i++) {
-    pool.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0, size: 2, color: "#fff", active: false });
-  }
-  return pool;
-}
-
-function emitParticles(
-  pool: PoolParticle[], count: number,
-  x: number, y: number,
-  opts: { speedMin: number; speedMax: number; lifeFrames: number; colors: string[]; sizeMin: number; sizeMax: number; gravity?: boolean },
-) {
-  let emitted = 0;
-  for (let i = 0; i < pool.length && emitted < count; i++) {
-    if (!pool[i].active) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = opts.speedMin + Math.random() * (opts.speedMax - opts.speedMin);
-      pool[i].x = x;
-      pool[i].y = y;
-      pool[i].vx = Math.cos(angle) * speed;
-      pool[i].vy = Math.sin(angle) * speed - (opts.gravity ? 2 : 0);
-      pool[i].life = opts.lifeFrames;
-      pool[i].maxLife = opts.lifeFrames;
-      pool[i].color = opts.colors[Math.floor(Math.random() * opts.colors.length)];
-      pool[i].size = opts.sizeMin + Math.random() * (opts.sizeMax - opts.sizeMin);
-      pool[i].active = true;
-      emitted++;
-    }
-  }
-}
-
-function updatePoolParticles(pool: PoolParticle[], applyGravity: boolean) {
-  for (let i = 0; i < pool.length; i++) {
-    const p = pool[i];
-    if (!p.active) continue;
-    p.x += p.vx;
-    p.y += p.vy;
-    if (applyGravity) p.vy += 0.1;
-    p.vx *= 0.99;
-    p.life--;
-    if (p.life <= 0) p.active = false;
-  }
-}
-
-function drawPoolParticles(ctx: CanvasRenderingContext2D, pool: PoolParticle[]) {
-  for (let i = 0; i < pool.length; i++) {
-    const p = pool[i];
-    if (!p.active) continue;
-    const alpha = p.life / p.maxLife;
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
-  }
-  ctx.globalAlpha = 1;
-}
-
-// --- Streak helpers ---
-
-function getStreakMultiplier(streak: number): number {
-  if (streak >= 10) return 3;
-  if (streak >= 7) return 2;
-  if (streak >= 5) return 1.5;
-  if (streak >= 3) return 1.25;
-  return 1;
-}
-
-function getMultiplierColor(mult: number): string {
-  if (mult >= 2) return "#ff4444";
-  if (mult >= 1.5) return "#DD550C";
-  if (mult >= 1.25) return "#FFD700";
-  return "white";
-}
 
 // --- Types ---
 
@@ -162,12 +75,6 @@ interface SpeedLine {
   alpha: number;
 }
 
-interface LeaderboardEntry {
-  name: string;
-  score: number;
-  date: string;
-}
-
 type GameState = "menu" | "playing" | "gameover";
 
 // --- Helpers ---
@@ -181,30 +88,6 @@ function rectsOverlap(
   bx: number, by: number, bw: number, bh: number
 ): boolean {
   return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
-}
-
-function loadLeaderboard(): LeaderboardEntry[] {
-  try {
-    const raw = localStorage.getItem(LOCALSTORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as LeaderboardEntry[];
-    return parsed
-      .filter((e) => e && typeof e.name === "string" && typeof e.score === "number")
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
-  } catch {
-    return [];
-  }
-}
-
-function saveToLeaderboard(entry: LeaderboardEntry): LeaderboardEntry[] {
-  const existing = loadLeaderboard();
-  existing.push(entry);
-  const sorted = existing.sort((a, b) => b.score - a.score).slice(0, 10);
-  try {
-    localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(sorted));
-  } catch { /* storage full */ }
-  return sorted;
 }
 
 // --- Component ---
@@ -230,7 +113,7 @@ export default function BreakawayGame() {
   const scaleRef = useRef(1);
 
   // Particle pool
-  const poolRef = useRef<PoolParticle[]>(createParticlePool());
+  const poolRef = useRef<Particle[]>(createParticlePool());
 
   // Screen shake (intensity + timer pattern)
   const shakeIntensityRef = useRef(0);
@@ -255,9 +138,12 @@ export default function BreakawayGame() {
   const [gameState, setGameState] = useState<GameState>("menu");
   const [, setYards] = useState(0);
   const [, setScore] = useState(0);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard());
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard(LOCALSTORAGE_KEY));
   const [scoreSaved, setScoreSaved] = useState(false);
   const [scoreRank, setScoreRank] = useState<number | null>(null);
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [playerName, setPlayerName] = useState("");
+  const showNameInputRef = useRef(false);
 
   // --- Game logic ---
 
@@ -291,6 +177,9 @@ export default function BreakawayGame() {
     setScore(0);
     setScoreSaved(false);
     setScoreRank(null);
+    setShowNameInput(false);
+    showNameInputRef.current = false;
+    setPlayerName("");
   }, []);
 
   const startGame = useCallback(() => {
@@ -319,25 +208,25 @@ export default function BreakawayGame() {
     setScore(finalScore);
 
     if (finalScore > 0) {
-      const name = window.prompt(
-        `You scored ${finalScore} pts (${finalYards} yds)! Enter your name for the leaderboard:`
-      );
-      if (name && name.trim()) {
-        const entry: LeaderboardEntry = {
-          name: name.trim(),
-          score: finalScore,
-          date: new Date().toISOString(),
-        };
-        const updated = saveToLeaderboard(entry);
-        setLeaderboard(updated);
-        setScoreSaved(true);
-        const rank = updated.findIndex(
-          (e) => e.name === entry.name && e.score === entry.score && e.date === entry.date
-        );
-        setScoreRank(rank >= 0 ? rank + 1 : null);
-      }
+      setShowNameInput(true);
+      showNameInputRef.current = true;
     }
   }, []);
+
+  const handleSaveScore = useCallback(() => {
+    const name = playerName.trim() || "Anonymous";
+    const finalScore = scoreRef.current;
+    saveToLeaderboard(LOCALSTORAGE_KEY, name, finalScore);
+    const updated = loadLeaderboard(LOCALSTORAGE_KEY);
+    setLeaderboard(updated);
+    setScoreSaved(true);
+    const rank = updated.findIndex(
+      (e) => e.name === name && e.score === finalScore
+    );
+    setScoreRank(rank >= 0 ? rank + 1 : null);
+    setShowNameInput(false);
+    showNameInputRef.current = false;
+  }, [playerName]);
 
   const moveLane = useCallback((dir: -1 | 1) => {
     if (stateRef.current !== "playing") return;
@@ -364,14 +253,14 @@ export default function BreakawayGame() {
         moveLane(1);
       } else if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
-        if (stateRef.current === "menu" || stateRef.current === "gameover") {
+        if ((stateRef.current === "menu" || stateRef.current === "gameover") && !showNameInput) {
           startGame();
         }
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [moveLane, startGame]);
+  }, [moveLane, startGame, showNameInput]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -386,7 +275,7 @@ export default function BreakawayGame() {
       touchStartX = t.clientX;
       touchStartY = t.clientY;
 
-      if (stateRef.current === "menu" || stateRef.current === "gameover") {
+      if ((stateRef.current === "menu" || stateRef.current === "gameover") && !showNameInputRef.current) {
         startGame();
       }
     }
@@ -663,7 +552,7 @@ export default function BreakawayGame() {
       }
 
       // Update particle pool
-      updatePoolParticles(poolRef.current, true);
+      updateParticles(poolRef.current);
 
       // Shake timer decay
       if (shakeTimerRef.current > 0) {
@@ -1018,7 +907,7 @@ export default function BreakawayGame() {
       }
 
       // Pool particles
-      drawPoolParticles(ctx, poolRef.current);
+      drawParticles(ctx, poolRef.current);
 
       // Flash overlay
       if (flashTimerRef.current > 0) {
@@ -1180,7 +1069,7 @@ export default function BreakawayGame() {
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
       {/* Game canvas */}
-      <div ref={containerRef} className="flex-1 flex justify-center">
+      <div ref={containerRef} className="flex-1 flex flex-col items-center">
         <canvas
           ref={canvasRef}
           width={CANVAS_W}
@@ -1188,6 +1077,26 @@ export default function BreakawayGame() {
           className="rounded-xl border-2 border-white/10 shadow-2xl shadow-black/50 cursor-pointer touch-none"
           style={{ imageRendering: "auto" }}
         />
+        {showNameInput && (
+          <div className="flex items-center justify-center gap-2 max-w-xs mx-auto mt-3">
+            <input
+              type="text"
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSaveScore()}
+              placeholder="Your name"
+              maxLength={20}
+              className="flex-1 bg-[#0d1b2a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+              autoFocus
+            />
+            <button
+              onClick={handleSaveScore}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold uppercase tracking-wide rounded-lg transition-colors"
+            >
+              Save
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Leaderboard */}

@@ -21,7 +21,7 @@ export default function Home() {
       <HighScores />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
-        <h2 className="font-heading text-[10px] text-gray-500 uppercase tracking-widest">
+        <h2 className="font-heading text-xs text-gray-500 uppercase tracking-widest">
           All Games
         </h2>
         <CategoryNav onFilter={setFilter} />
