@@ -381,7 +381,7 @@ export default function WikiRaceGame() {
     lastFetchRef.current = Date.now();
 
     try {
-      const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*&prop=text|displaytitle`;
+      const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*&redirects=1&prop=text|displaytitle`;
       const res = await fetch(url);
       if (!res.ok) return null;
       const data = await res.json();
