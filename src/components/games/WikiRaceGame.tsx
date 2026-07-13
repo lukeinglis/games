@@ -485,7 +485,7 @@ export default function WikiRaceGame() {
 
     container.addEventListener("click", handleClick);
     return () => container.removeEventListener("click", handleClick);
-  }, [phase, navigateTo]);
+  }, [phase, navigateTo, pageHtml]);
 
   // --- Actions ---
   const handleSpin = () => {
