@@ -386,8 +386,14 @@ export default function WikiRaceGame() {
       if (!res.ok) return null;
       const data = await res.json();
       if (data.error) return null;
-      const html = data.parse?.text?.["*"] || "";
+      let html = data.parse?.text?.["*"] || "";
       const canonicalTitle = data.parse?.title || title;
+      // Rewrite /wiki/ links to prevent Next.js router interception.
+      // Replace href="/wiki/Title" with href="#" data-wiki-title="Title"
+      html = html.replace(
+        /href="\/wiki\/([^"#]+)(?:#[^"]*)?"/g,
+        (_match: string, articlePath: string) => `href="#" data-wiki-title="${articlePath}"`
+      );
       return { html, canonicalTitle };
     } catch {
       return null;
@@ -456,24 +462,17 @@ export default function WikiRaceGame() {
     if (!container || phase !== "racing") return;
 
     const handleClick = (e: MouseEvent) => {
-      // Find the nearest anchor tag
       let target = e.target as HTMLElement | null;
       while (target && target !== container) {
         if (target.tagName === "A") {
           e.preventDefault();
           e.stopPropagation();
-          const href = target.getAttribute("href") || "";
 
-          // Only follow internal wiki links
-          const match = href.match(/\/wiki\/([^#]+)/);
-          if (match) {
-            const articleTitle = decodeURIComponent(match[1].replace(/_/g, " "));
-            // Skip special pages
-            if (
-              articleTitle.includes(":") &&
-              !articleTitle.startsWith("The ") // Allow articles like "The Beatles"
-            ) {
-              return; // Skip Wikipedia:, File:, Help:, etc.
+          const wikiTitle = target.getAttribute("data-wiki-title");
+          if (wikiTitle) {
+            const articleTitle = decodeURIComponent(wikiTitle.replace(/_/g, " "));
+            if (articleTitle.includes(":") && !articleTitle.startsWith("The ")) {
+              return;
             }
             navigateTo(articleTitle);
           }
