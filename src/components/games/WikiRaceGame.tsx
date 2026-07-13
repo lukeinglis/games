@@ -456,35 +456,27 @@ export default function WikiRaceGame() {
     }
   }, [loading, fetchArticle, targetArticle, path.length, streak]);
 
-  // Handle link clicks in the Wikipedia content
-  useEffect(() => {
-    const container = contentRef.current;
-    if (!container || phase !== "racing") return;
+  // Handle link clicks in the Wikipedia content (React onClick, not useEffect)
+  const handleWikiClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    let target = e.target as HTMLElement | null;
+    while (target && target !== e.currentTarget) {
+      if (target.tagName === "A") {
+        e.preventDefault();
+        e.stopPropagation();
 
-    const handleClick = (e: MouseEvent) => {
-      let target = e.target as HTMLElement | null;
-      while (target && target !== container) {
-        if (target.tagName === "A") {
-          e.preventDefault();
-          e.stopPropagation();
-
-          const wikiTitle = target.getAttribute("data-wiki-title");
-          if (wikiTitle) {
-            const articleTitle = decodeURIComponent(wikiTitle.replace(/_/g, " "));
-            if (articleTitle.includes(":") && !articleTitle.startsWith("The ")) {
-              return;
-            }
-            navigateTo(articleTitle);
+        const wikiTitle = target.getAttribute("data-wiki-title");
+        if (wikiTitle) {
+          const articleTitle = decodeURIComponent(wikiTitle.replace(/_/g, " "));
+          if (articleTitle.includes(":") && !articleTitle.startsWith("The ")) {
+            return;
           }
-          return;
+          navigateTo(articleTitle);
         }
-        target = target.parentElement;
+        return;
       }
-    };
-
-    container.addEventListener("click", handleClick);
-    return () => container.removeEventListener("click", handleClick);
-  }, [phase, navigateTo, pageHtml]);
+      target = target.parentElement;
+    }
+  }, [navigateTo]);
 
   // --- Actions ---
   const handleSpin = () => {
@@ -824,6 +816,7 @@ export default function WikiRaceGame() {
             <div
               ref={contentRef}
               className="wiki-content flex-1 overflow-y-auto rounded-lg border border-white/10 bg-[#0d1b2a] p-4 sm:p-6"
+              onClick={handleWikiClick}
               dangerouslySetInnerHTML={{ __html: pageHtml }}
             />
           )}
