@@ -91,6 +91,14 @@ function createParticleBurst(
 }
 
 // --- Helpers ---
+function hashDate(date: string): number {
+  let hash = 0;
+  for (let i = 0; i < date.length; i++) {
+    hash = ((hash << 5) - hash + date.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
 function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -279,6 +287,10 @@ export default function WikiRaceGame() {
   const [particles, setParticles] = useState<DOMParticle[]>([]);
   const [nameInput, setNameInput] = useState("");
   const [scoreSaved, setScoreSaved] = useState(false);
+  const [isDaily, setIsDaily] = useState(false);
+  const [dailyAlreadyPlayed, setDailyAlreadyPlayed] = useState<number | null>(null);
+  const [challengeFrom, setChallengeFrom] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -293,6 +305,25 @@ export default function WikiRaceGame() {
       if (timerRef.current) clearInterval(timerRef.current);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
+  }, []);
+
+  // Check URL hash for challenge link on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (!hash) return;
+    const params = new URLSearchParams(hash.slice(1));
+    const s = params.get("start");
+    const t = params.get("target");
+    if (s && t) {
+      requestAnimationFrame(() => {
+        setStartArticle(decodeURIComponent(s));
+        setTargetArticle(decodeURIComponent(t));
+        setChallengeFrom(true);
+        setPhase("ready");
+      });
+      window.history.replaceState(null, "", window.location.pathname);
+    }
   }, []);
 
   // Particle animation loop
@@ -400,6 +431,11 @@ export default function WikiRaceGame() {
       setPhase("victory");
       setScoreSaved(false);
 
+      if (isDaily) {
+        const today = new Date().toISOString().slice(0, 10);
+        localStorage.setItem(`wiki-race-daily-played-${today}`, String(score));
+      }
+
       // Spawn particles
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
@@ -466,6 +502,37 @@ export default function WikiRaceGame() {
     }, 2500);
   };
 
+  const handleDailyChallenge = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const dailyKey = `wiki-race-daily-played-${today}`;
+
+    const previous = localStorage.getItem(dailyKey);
+    if (previous) {
+      setDailyAlreadyPlayed(parseInt(previous, 10));
+      return;
+    }
+
+    const hash = hashDate(today);
+    const startIdx = hash % ARTICLES.length;
+    let targetIdx = (hash * 31 + 7) % ARTICLES.length;
+    if (targetIdx === startIdx) {
+      targetIdx = (targetIdx + 1) % ARTICLES.length;
+    }
+
+    setStartArticle(ARTICLES[startIdx]);
+    setTargetArticle(ARTICLES[targetIdx]);
+    setIsDaily(true);
+    setPhase("ready");
+  };
+
+  const handleCopyChallenge = () => {
+    if (!startArticle || !targetArticle) return;
+    const url = `${window.location.origin}${window.location.pathname}#start=${encodeURIComponent(startArticle)}&target=${encodeURIComponent(targetArticle)}`;
+    navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 3000);
+  };
+
   const handleStartRace = async () => {
     if (!startArticle) return;
     setPhase("racing");
@@ -505,6 +572,10 @@ export default function WikiRaceGame() {
     setElapsedMs(0);
     setError(null);
     setParticles([]);
+    setIsDaily(false);
+    setDailyAlreadyPlayed(null);
+    setChallengeFrom(false);
+    setLinkCopied(false);
   };
 
   const handleSaveScore = () => {
@@ -580,15 +651,46 @@ export default function WikiRaceGame() {
             />
           </div>
 
+          {/* Challenge badge */}
+          {isDaily && (
+            <div className="flex justify-center">
+              <span className="inline-flex items-center gap-1.5 bg-purple-500/20 border border-purple-500/40 rounded-full px-3 py-1 text-xs text-purple-300 font-bold">
+                Daily Challenge: {new Date().toISOString().slice(0, 10)}
+              </span>
+            </div>
+          )}
+          {challengeFrom && !isDaily && (
+            <div className="flex justify-center">
+              <span className="inline-flex items-center gap-1.5 bg-blue-500/20 border border-blue-500/40 rounded-full px-3 py-1 text-xs text-blue-300 font-bold">
+                Challenge from a friend
+              </span>
+            </div>
+          )}
+          {dailyAlreadyPlayed !== null && (
+            <div className="text-center rounded-lg border border-purple-500/20 bg-purple-500/10 p-4">
+              <p className="text-sm text-purple-300 font-bold mb-1">Already played today!</p>
+              <p className="text-xs text-gray-400">Your score: <span className="text-purple-300 font-bold">{dailyAlreadyPlayed} pts</span></p>
+              <button onClick={() => setDailyAlreadyPlayed(null)} className="mt-2 text-xs text-gray-500 hover:text-gray-300">Dismiss</button>
+            </div>
+          )}
+
           {/* Buttons */}
           <div className="flex flex-col items-center gap-3">
             {phase === "menu" && (
-              <button
-                onClick={handleSpin}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold uppercase tracking-wide rounded-lg transition-colors text-sm"
-              >
-                Spin the Wheels
-              </button>
+              <div className="flex flex-wrap justify-center gap-3">
+                <button
+                  onClick={handleSpin}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold uppercase tracking-wide rounded-lg transition-colors text-sm"
+                >
+                  Spin the Wheels
+                </button>
+                <button
+                  onClick={handleDailyChallenge}
+                  className="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white font-heading font-bold uppercase tracking-wide rounded-lg transition-colors text-sm"
+                >
+                  Daily Challenge
+                </button>
+              </div>
             )}
             {phase === "spinning" && (
               <div className="text-sm text-gray-500 animate-pulse">
@@ -596,12 +698,20 @@ export default function WikiRaceGame() {
               </div>
             )}
             {phase === "ready" && (
-              <button
-                onClick={handleStartRace}
-                className="px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-heading font-bold uppercase tracking-wide rounded-lg transition-colors text-sm animate-pulse"
-              >
-                Start Race!
-              </button>
+              <div className="flex flex-wrap justify-center gap-3">
+                <button
+                  onClick={handleStartRace}
+                  className="px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-heading font-bold uppercase tracking-wide rounded-lg transition-colors text-sm animate-pulse"
+                >
+                  Start Race!
+                </button>
+                <button
+                  onClick={handleCopyChallenge}
+                  className="px-4 py-3 bg-white/10 hover:bg-white/20 text-gray-300 font-heading font-bold uppercase tracking-wide rounded-lg transition-colors text-xs"
+                >
+                  {linkCopied ? "Copied!" : "Copy Challenge Link"}
+                </button>
+              </div>
             )}
           </div>
 
@@ -619,13 +729,33 @@ export default function WikiRaceGame() {
         <div className="flex flex-col" style={{ height: "calc(100vh - 120px)" }}>
           {/* Race header */}
           <div className="flex-shrink-0 space-y-2 mb-3">
-            {/* Top bar: target + timer + hops + give up */}
+            {/* Top bar: back + target + timer + hops + give up */}
             <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={async () => {
+                  if (path.length <= 1 || loading) return;
+                  const prev = path[path.length - 2];
+                  setPath((p) => [...p, prev]);
+                  setLoading(true);
+                  const result = await fetchArticle(prev);
+                  if (result) {
+                    setCurrentTitle(result.canonicalTitle);
+                    setPageHtml(result.html);
+                    if (contentRef.current) contentRef.current.scrollTop = 0;
+                  }
+                  setLoading(false);
+                }}
+                disabled={path.length <= 1 || loading}
+                className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                title="Go back (costs a hop)"
+              >
+                &larr;
+              </button>
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className="text-[10px] font-heading uppercase tracking-widest text-gray-500">
                   Target:
                 </span>
-                <span className="text-sm font-bold text-green-400 truncate">
+                <span className="text-sm font-bold text-red-400 truncate animate-pulse">
                   {targetArticle}
                 </span>
               </div>
@@ -784,12 +914,20 @@ export default function WikiRaceGame() {
             <p className="text-sm text-green-400">Score saved!</p>
           )}
 
-          <button
-            onClick={handlePlayAgain}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold uppercase tracking-wide rounded-lg transition-colors text-sm"
-          >
-            Play Again
-          </button>
+          <div className="flex flex-wrap justify-center gap-3">
+            <button
+              onClick={handlePlayAgain}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-heading font-bold uppercase tracking-wide rounded-lg transition-colors text-sm"
+            >
+              Play Again
+            </button>
+            <button
+              onClick={handleCopyChallenge}
+              className="px-4 py-3 bg-white/10 hover:bg-white/20 text-gray-300 font-heading font-bold uppercase tracking-wide rounded-lg transition-colors text-xs"
+            >
+              {linkCopied ? "Copied!" : "Challenge a Friend"}
+            </button>
+          </div>
 
           <GameLeaderboard
             gameSlug="wiki-race"
