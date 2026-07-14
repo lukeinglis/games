@@ -388,11 +388,12 @@ export default function WikiRaceGame() {
       if (data.error) return null;
       let html = data.parse?.text?.["*"] || "";
       const canonicalTitle = data.parse?.title || title;
-      // Rewrite /wiki/ links to prevent Next.js router interception.
-      // Replace href="/wiki/Title" with href="#" data-wiki-title="Title"
+      // Replace <a href="/wiki/..."> with <span> to prevent Next.js
+      // router from intercepting clicks on anchor tags.
       html = html.replace(
-        /href="\/wiki\/([^"#]+)(?:#[^"]*)?"/g,
-        (_match: string, articlePath: string) => `href="#" data-wiki-title="${articlePath}"`
+        /<a\s+href="\/wiki\/([^"#]+)(?:#[^"]*)?"[^>]*>([\s\S]*?)<\/a>/g,
+        (_match: string, articlePath: string, inner: string) =>
+          `<span class="wiki-link" data-wiki-title="${articlePath}">${inner}</span>`
       );
       return { html, canonicalTitle };
     } catch {
@@ -456,22 +457,19 @@ export default function WikiRaceGame() {
     }
   }, [loading, fetchArticle, targetArticle, path.length, streak]);
 
-  // Handle link clicks in the Wikipedia content (React onClick, not useEffect)
+  // Handle clicks on wiki-link spans in the Wikipedia content
   const handleWikiClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     let target = e.target as HTMLElement | null;
     while (target && target !== e.currentTarget) {
-      if (target.tagName === "A") {
+      const wikiTitle = target.getAttribute("data-wiki-title");
+      if (wikiTitle) {
         e.preventDefault();
         e.stopPropagation();
-
-        const wikiTitle = target.getAttribute("data-wiki-title");
-        if (wikiTitle) {
-          const articleTitle = decodeURIComponent(wikiTitle.replace(/_/g, " "));
-          if (articleTitle.includes(":") && !articleTitle.startsWith("The ")) {
-            return;
-          }
-          navigateTo(articleTitle);
+        const articleTitle = decodeURIComponent(wikiTitle.replace(/_/g, " "));
+        if (articleTitle.includes(":") && !articleTitle.startsWith("The ")) {
+          return;
         }
+        navigateTo(articleTitle);
         return;
       }
       target = target.parentElement;
@@ -1004,15 +1002,19 @@ export default function WikiRaceGame() {
         .wiki-content h3 { font-size: 1.1rem; }
         .wiki-content h4 { font-size: 1rem; }
 
-        .wiki-content a {
+        .wiki-content .wiki-link {
           color: #4fc3f7;
-          text-decoration: none;
+          cursor: pointer;
           border-bottom: 1px solid rgba(79, 195, 247, 0.3);
           transition: all 0.15s;
         }
-        .wiki-content a:hover {
+        .wiki-content .wiki-link:hover {
           color: #81d4fa;
           border-bottom-color: #81d4fa;
+        }
+        .wiki-content a {
+          color: #9ca3af;
+          pointer-events: none;
         }
 
         .wiki-content p {
