@@ -276,7 +276,6 @@ export default function WikiRaceGame() {
   const [targetArticle, setTargetArticle] = useState<string | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [, setCurrentTitle] = useState<string>("");
-  const [pageHtml, setPageHtml] = useState<string>("");
   const [path, setPath] = useState<string[]>([]);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -298,6 +297,7 @@ export default function WikiRaceGame() {
   const animFrameRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastFetchRef = useRef<number>(0);
+  const isLoadingRef = useRef(false);
 
   // Clean up on unmount
   useEffect(() => {
@@ -370,8 +370,13 @@ export default function WikiRaceGame() {
     };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch a Wikipedia article
-  const fetchArticle = useCallback(async (title: string): Promise<{ html: string; canonicalTitle: string } | null> => {
+  // Navigate to an article during the race using direct DOM manipulation
+  const navigateTo = useCallback(async (title: string) => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
+    setLoading(true);
+    setError(null);
+
     // Rate limiting: wait at least 300ms between fetches
     const now = Date.now();
     const wait = Math.max(0, 300 - (now - lastFetchRef.current));
@@ -381,100 +386,129 @@ export default function WikiRaceGame() {
     lastFetchRef.current = Date.now();
 
     try {
-      const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*&redirects=1&prop=text|displaytitle`;
+      const url = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(title)}&format=json&origin=*&redirects=1&disableeditsection=true&prop=text&useskin=vector`;
       const res = await fetch(url);
-      if (!res.ok) return null;
+      if (!res.ok) throw new Error("fetch failed");
       const data = await res.json();
-      if (data.error) return null;
-      let html = data.parse?.text?.["*"] || "";
+      if (data.error) throw new Error(data.error.info || "API error");
+
+      const html = data.parse?.text?.["*"] || "";
       const canonicalTitle = data.parse?.title || title;
-      // Replace <a href="/wiki/..."> with <span> to prevent Next.js
-      // router from intercepting clicks on anchor tags.
-      html = html.replace(
-        /<a\s+href="\/wiki\/([^"#]+)(?:#[^"]*)?"[^>]*>([\s\S]*?)<\/a>/g,
-        (_match: string, articlePath: string, inner: string) =>
-          `<span class="wiki-link" data-wiki-title="${articlePath}">${inner}</span>`
-      );
-      return { html, canonicalTitle };
-    } catch {
-      return null;
-    }
-  }, []);
+      const container = contentRef.current;
+      if (!container) throw new Error("no container");
 
-  // Navigate to an article during the race
-  const navigateTo = useCallback(async (title: string) => {
-    if (loading) return;
-    setLoading(true);
-    setError(null);
+      // Set raw HTML directly on the DOM element
+      container.innerHTML = html;
 
-    const result = await fetchArticle(title);
-    if (!result) {
-      setError(`Could not load "${title}". Click back to try another link.`);
-      setLoading(false);
-      return;
-    }
+      // Hide unnecessary elements
+      const hideSelectors = [
+        ".reference", ".mw-editsection", ".reflist", ".navbox",
+        ".sidebar", ".external", ".noprint", ".metadata", ".catlinks",
+        ".hatnote", ".shortdescription", ".authority-control",
+        ".refbegin", ".references", ".navbox-styles", ".sistersitebox",
+        ".mw-empty-elt", ".mbox-small", ".mbox-text", ".ambox",
+        ".tmbox", ".ombox", ".cmbox", ".fmbox", ".dmbox", ".imbox",
+        ".portal", ".mw-authority-control", ".plainlinks",
+        ".mw-indicators", ".mw-cite-backlink", ".citation",
+        "sup.reference", ".noexcerpt", ".mw-kartographer-container",
+        ".mw-kartographer-map", ".locmap", ".mw-graph",
+        ".mw-redirect", ".infobox", ".wikitable", ".sidebar-content",
+        "img", "figure", ".thumb", ".image", ".mw-file-element",
+        ".mw-default-size", ".mw-halign-right", ".mw-halign-left",
+        ".mw-file-description",
+      ];
+      container.querySelectorAll(hideSelectors.join(",")).forEach((el) => {
+        (el as HTMLElement).style.display = "none";
+      });
 
-    setCurrentTitle(result.canonicalTitle);
-    setPageHtml(result.html);
-    setPath((prev) => [...prev, result.canonicalTitle]);
-    setLoading(false);
+      // Hide content after See_also/References/External_links headings
+      const endSectionIds = [
+        "See_also", "References", "External_links", "Further_reading",
+        "Notes", "Sources", "Bibliography", "Citations",
+      ];
+      endSectionIds.forEach((id) => {
+        const heading = container.querySelector(`#${id}`);
+        if (!heading) return;
+        // Hide the heading's parent (.mw-heading or the heading itself)
+        let headingEl: HTMLElement | null = heading.closest(".mw-heading") || heading as HTMLElement;
+        (headingEl as HTMLElement).style.display = "none";
+        // Hide all subsequent siblings
+        let sibling = headingEl.nextElementSibling;
+        while (sibling) {
+          (sibling as HTMLElement).style.display = "none";
+          sibling = sibling.nextElementSibling;
+        }
+      });
 
-    // Scroll content to top
-    if (contentRef.current) {
-      contentRef.current.scrollTop = 0;
-    }
-
-    // Check if we reached the target
-    if (targetArticle && normalizeTitle(result.canonicalTitle) === normalizeTitle(targetArticle)) {
-      // Victory!
-      const finalTime = Date.now() - startTimeRef.current;
-      setElapsedMs(finalTime);
-      const hopCount = path.length; // path doesn't include this one yet, but we add 1
-      const newStreak = streak + 1;
-      const score = calcScore(hopCount, finalTime, newStreak);
-      setFinalScore(score);
-      setStreak(newStreak);
-      saveStreak(newStreak);
-      setPhase("victory");
-      setScoreSaved(false);
-
-      if (isDaily) {
-        const today = new Date().toISOString().slice(0, 10);
-        localStorage.setItem(`wiki-race-daily-played-${today}`, String(score));
-      }
-
-      // Spawn particles
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        const cx = rect.width / 2;
-        const cy = rect.height / 3;
-        setParticles(
-          createParticleBurst(cx, cy, 40, [
-            "#FFD700", "#4fc3f7", "#81C784", "#E040FB", "#FF7043",
-          ], ["*", "+", "W", "!", "o"]),
-        );
-      }
-    }
-  }, [loading, fetchArticle, targetArticle, path.length, streak]);
-
-  // Handle clicks on wiki-link spans in the Wikipedia content
-  const handleWikiClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    let target = e.target as HTMLElement | null;
-    while (target && target !== e.currentTarget) {
-      const wikiTitle = target.getAttribute("data-wiki-title");
-      if (wikiTitle) {
-        e.preventDefault();
-        e.stopPropagation();
-        const articleTitle = decodeURIComponent(wikiTitle.replace(/_/g, " "));
-        if (articleTitle.includes(":") && !articleTitle.startsWith("The ")) {
+      // Process all links: strip non-article links, attach onclick to article links
+      container.querySelectorAll("a, area").forEach((el) => {
+        const href = el.getAttribute("href");
+        if (!href || !href.startsWith("/wiki/") || href.includes(":")) {
+          // Non-article link: replace with a span to avoid Next.js interception
+          const span = document.createElement("span");
+          span.innerHTML = el.innerHTML;
+          span.className = el.className;
+          el.replaceWith(span);
           return;
         }
-        navigateTo(articleTitle);
-        return;
+
+        // Article link: extract page name and attach direct onclick
+        const pageName = decodeURIComponent(
+          href.replace(/^\/wiki\//, "").replace(/#.*$/, "").replace(/_/g, " ")
+        );
+        (el as HTMLElement).removeAttribute("href");
+        (el as HTMLElement).onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          navigateTo(pageName);
+        };
+      });
+
+      // Update React state for the HUD
+      setCurrentTitle(canonicalTitle);
+      setPath((prev) => [...prev, canonicalTitle]);
+      setLoading(false);
+      isLoadingRef.current = false;
+      container.scrollTop = 0;
+
+      // Check if we reached the target
+      if (targetArticle && normalizeTitle(canonicalTitle) === normalizeTitle(targetArticle)) {
+        const finalTime = Date.now() - startTimeRef.current;
+        setElapsedMs(finalTime);
+        setPath((prev) => {
+          const hopCount = prev.length - 1;
+          const newStreak = streak + 1;
+          const score = calcScore(hopCount, finalTime, newStreak);
+          setFinalScore(score);
+          setStreak(newStreak);
+          saveStreak(newStreak);
+          setPhase("victory");
+          setScoreSaved(false);
+
+          if (isDaily) {
+            const today = new Date().toISOString().slice(0, 10);
+            localStorage.setItem(`wiki-race-daily-played-${today}`, String(score));
+          }
+          return prev;
+        });
+
+        if (containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          const cx = rect.width / 2;
+          const cy = rect.height / 3;
+          setParticles(
+            createParticleBurst(cx, cy, 40, [
+              "#FFD700", "#4fc3f7", "#81C784", "#E040FB", "#FF7043",
+            ], ["*", "+", "W", "!", "o"]),
+          );
+        }
       }
-      target = target.parentElement;
+    } catch {
+      setError(`Could not load "${title}". Click back to try another link.`);
+      setLoading(false);
+      isLoadingRef.current = false;
     }
-  }, [navigateTo]);
+  }, [targetArticle, streak, isDaily]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Actions ---
   const handleSpin = () => {
@@ -528,21 +562,8 @@ export default function WikiRaceGame() {
     setPath([]);
     setElapsedMs(0);
     setError(null);
-    setLoading(true);
-
-    const result = await fetchArticle(startArticle);
-    if (!result) {
-      setError("Failed to load starting article. Please try again.");
-      setPhase("ready");
-      setLoading(false);
-      return;
-    }
-
-    setCurrentTitle(result.canonicalTitle);
-    setPageHtml(result.html);
-    setPath([result.canonicalTitle]);
-    setLoading(false);
     startTimeRef.current = Date.now();
+    navigateTo(startArticle);
   };
 
   const handleGiveUp = () => {
@@ -556,7 +577,7 @@ export default function WikiRaceGame() {
     setPhase("menu");
     setStartArticle(null);
     setTargetArticle(null);
-    setPageHtml("");
+    if (contentRef.current) contentRef.current.innerHTML = "";
     setPath([]);
     setElapsedMs(0);
     setError(null);
@@ -721,18 +742,10 @@ export default function WikiRaceGame() {
             {/* Top bar: back + target + timer + hops + give up */}
             <div className="flex items-center gap-3 flex-wrap">
               <button
-                onClick={async () => {
+                onClick={() => {
                   if (path.length <= 1 || loading) return;
                   const prev = path[path.length - 2];
-                  setPath((p) => [...p, prev]);
-                  setLoading(true);
-                  const result = await fetchArticle(prev);
-                  if (result) {
-                    setCurrentTitle(result.canonicalTitle);
-                    setPageHtml(result.html);
-                    if (contentRef.current) contentRef.current.scrollTop = 0;
-                  }
-                  setLoading(false);
+                  navigateTo(prev);
                 }}
                 disabled={path.length <= 1 || loading}
                 className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
@@ -810,14 +823,11 @@ export default function WikiRaceGame() {
           )}
 
           {/* Wikipedia content */}
-          {!loading && pageHtml && (
-            <div
-              ref={contentRef}
-              className="wiki-content flex-1 overflow-y-auto rounded-lg border border-white/10 bg-[#0d1b2a] p-4 sm:p-6"
-              onClick={handleWikiClick}
-              dangerouslySetInnerHTML={{ __html: pageHtml }}
-            />
-          )}
+          <div
+            ref={contentRef}
+            className="wiki-content flex-1 overflow-y-auto rounded-lg border border-white/10 bg-[#0d1b2a] p-4 sm:p-6"
+            style={{ display: loading ? "none" : undefined }}
+          />
         </div>
       )}
 
@@ -1002,19 +1012,15 @@ export default function WikiRaceGame() {
         .wiki-content h3 { font-size: 1.1rem; }
         .wiki-content h4 { font-size: 1rem; }
 
-        .wiki-content .wiki-link {
+        .wiki-content a {
           color: #4fc3f7;
           cursor: pointer;
           border-bottom: 1px solid rgba(79, 195, 247, 0.3);
           transition: all 0.15s;
         }
-        .wiki-content .wiki-link:hover {
+        .wiki-content a:hover {
           color: #81d4fa;
           border-bottom-color: #81d4fa;
-        }
-        .wiki-content a {
-          color: #9ca3af;
-          pointer-events: none;
         }
 
         .wiki-content p {
