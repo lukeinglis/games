@@ -25,7 +25,7 @@ export function FeaturedGames() {
         ) : (
           <div
             className="h-full flex items-center justify-center"
-            style={{ background: `linear-gradient(135deg, ${hero.color}cc, ${hero.color}66, #0A1628)` }}
+            style={{ background: `linear-gradient(135deg, ${hero.color}cc, ${hero.color}66, #2E3440)` }}
           >
             <span className="text-7xl sm:text-8xl drop-shadow-lg">{hero.emoji}</span>
           </div>
@@ -93,7 +93,7 @@ export function FeaturedGames() {
                   ) : (
                     <div
                       className="h-full flex items-center justify-center"
-                      style={{ background: `linear-gradient(135deg, ${game.color}aa, ${game.color}55, #0A1628)` }}
+                      style={{ background: `linear-gradient(135deg, ${game.color}aa, ${game.color}55, #2E3440)` }}
                     >
                       <span className="text-3xl sm:text-4xl drop-shadow-lg">{game.emoji}</span>
                     </div>

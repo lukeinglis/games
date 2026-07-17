@@ -388,12 +388,12 @@ export default function GuessTheFlag() {
         if (isPerfect) {
           triggerFlash("perfect");
           emitParticles(particleOriginX, particleOriginY, 40, [
-            "#FFD700", "#00E676", "#ffffff", "#FFA500",
+            "#EBCB8B", "#A3BE8C", "#ffffff", "#FFA500",
           ]);
         } else {
           triggerFlash("correct");
           emitParticles(particleOriginX, particleOriginY, 20, [
-            "#00E676", "#FFD700", "#ffffff",
+            "#A3BE8C", "#EBCB8B", "#ffffff",
           ]);
         }
 
@@ -567,7 +567,7 @@ export default function GuessTheFlag() {
                   }}
                 >
                   <span className="text-xs font-bold" style={{
-                    color: mult >= 2 ? "#ff4444" : mult >= 1.5 ? "#FFA500" : "#FFD700",
+                    color: mult >= 2 ? "#ff4444" : mult >= 1.5 ? "#FFA500" : "#EBCB8B",
                   }}>
                     {streak}x {streakLabel}
                   </span>

@@ -12,9 +12,9 @@ import { loadLeaderboard, saveToLeaderboard, type LeaderboardEntry } from "@/lib
 // --- Colors ---
 const FIELD_GREEN = "#2d5a27";
 const FIELD_GREEN_ALT = "#2a5224";
-const ORANGE = "#DD550C";
-const NAVY = "#0C2340";
-const GOALPOST_YELLOW = "#FFD700";
+const ORANGE = "#D08770";
+const NAVY = "#2E3440";
+const GOALPOST_YELLOW = "#EBCB8B";
 const SKY_TOP = "#0a1c30";
 const SKY_BOTTOM = "#1a3a5c";
 
@@ -67,7 +67,7 @@ interface BallState {
 const MAX_PARTICLES = 150;
 const BALL_TRAIL_LENGTH = 8;
 
-const CONFETTI_COLORS = ["#FFD700", "#DD550C", "#ffffff"];
+const CONFETTI_COLORS = ["#EBCB8B", "#D08770", "#ffffff"];
 
 function easeOutExpo(t: number): number {
   return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
@@ -546,7 +546,7 @@ export default function FieldGoalGame() {
 
           emitParticles(particlesRef.current, 18, VANISHING_X, gp.crossbarY, {
             speedMin: 2, speedMax: 6, lifeFrames: 20,
-            colors: ["#ffffff", "#FFD700"], sizeMin: 1, sizeMax: 3,
+            colors: ["#ffffff", "#EBCB8B"], sizeMin: 1, sizeMax: 3,
           });
 
           ballRef.current = null;
@@ -662,7 +662,7 @@ export default function FieldGoalGame() {
         const cx = baseX + col * 2 * dirX + row * dirX * 0.5;
         const cy = HORIZON_Y + row * 15 + col * 3 + 10;
         if (cy > CANVAS_H - 10) continue;
-        const colors = ["#DD550C", "#0C2340", "#fff", "#aaa", "#DD550C"];
+        const colors = ["#D08770", "#2E3440", "#fff", "#aaa", "#D08770"];
         ctx.fillStyle = colors[i % colors.length];
         ctx.globalAlpha = 0.4;
         ctx.fillRect(cx, cy, 2, 3);
@@ -1335,7 +1335,7 @@ export default function FieldGoalGame() {
               onKeyDown={(e) => e.key === "Enter" && handleSaveScore()}
               placeholder="Your name"
               maxLength={20}
-              className="flex-1 bg-[#0d1b2a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+              className="flex-1 bg-[#3B4252] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
               autoFocus
             />
             <button
@@ -1350,9 +1350,9 @@ export default function FieldGoalGame() {
 
       {/* Leaderboard */}
       <div className="w-full lg:w-72 flex-shrink-0">
-        <div className="rounded-xl border border-white/10 bg-[#112d4e] overflow-hidden">
+        <div className="rounded-xl border border-white/10 bg-[#434C5E] overflow-hidden">
           <div className="border-b border-white/10 px-4 py-3">
-            <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold uppercase tracking-wide text-[#DD550C]">
+            <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold uppercase tracking-wide text-[#D08770]">
               Leaderboard
             </h3>
           </div>
@@ -1370,9 +1370,9 @@ export default function FieldGoalGame() {
                   <span
                     className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
                       i === 0
-                        ? "bg-[#DD550C] text-white"
+                        ? "bg-[#D08770] text-white"
                         : i < 3
-                        ? "bg-[#DD550C]/50 text-white"
+                        ? "bg-[#D08770]/50 text-white"
                         : "bg-white/10 text-gray-400"
                     }`}
                   >
@@ -1383,7 +1383,7 @@ export default function FieldGoalGame() {
                       {entry.name}
                     </p>
                   </div>
-                  <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#DD550C]">
+                  <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#D08770]">
                     {entry.score.toLocaleString()}
                   </span>
                 </div>

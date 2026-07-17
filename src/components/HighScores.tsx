@@ -82,7 +82,7 @@ export default function HighScores() {
   if (!mounted) return null;
   if (scores.length === 0) {
     return (
-      <section className="rounded-xl border border-white/10 bg-[#0d1b2a]/90 backdrop-blur-sm p-5">
+      <section className="rounded-xl border border-white/10 bg-[#3B4252]/90 backdrop-blur-sm p-5">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-lg" aria-hidden>
             🏆
@@ -99,7 +99,7 @@ export default function HighScores() {
   }
 
   return (
-    <section className="rounded-xl border border-gold/20 bg-[#0d1b2a]/90 backdrop-blur-sm overflow-hidden">
+    <section className="rounded-xl border border-gold/20 bg-[#3B4252]/90 backdrop-blur-sm overflow-hidden">
       <div className="flex items-center gap-2 px-5 pt-4 pb-2">
         <span className="text-lg" aria-hidden>
           🏆

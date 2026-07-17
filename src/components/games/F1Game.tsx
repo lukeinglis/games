@@ -7,7 +7,7 @@ import { loadLeaderboard, saveToLeaderboard, type LeaderboardEntry } from "@/lib
 // ── Team colors for barriers ──
 const TEAM_PALETTE = [
   { color: "#3671C6", label: "RBR" },
-  { color: "#E8002D", label: "FER" },
+  { color: "#BF616A", label: "FER" },
   { color: "#27F4D2", label: "MER" },
   { color: "#FF8000", label: "MCL" },
   { color: "#229971", label: "AMR" },
@@ -53,8 +53,8 @@ const SHAKE_PX = 4;
 
 // ── Juice: particle pool ──
 const MAX_PARTICLES = 120;
-const TRAIL_COLORS = ["#ff6600", "#ff4400", "#ff8800", "#FFD700"];
-const OVERTAKE_COLORS = ["#FFD700", "#fff", "#ff8800"];
+const TRAIL_COLORS = ["#ff6600", "#ff4400", "#ff8800", "#EBCB8B"];
+const OVERTAKE_COLORS = ["#EBCB8B", "#fff", "#ff8800"];
 const CRASH_COLORS = ["#ff2200", "#ff4400", "#ff6600", "#222"];
 
 // ── Juice: streak ──
@@ -192,7 +192,7 @@ export default function F1Game() {
     ctx.fillRect(-hw - 2, -hh * 1.1, 3, hh * 2.2);
 
     // -- Main body: angular F1 shape --
-    ctx.fillStyle = "#E8002D";
+    ctx.fillStyle = "#BF616A";
     ctx.beginPath();
     // Nose (sharp point to the right)
     ctx.moveTo(hw + 6, 0);
@@ -250,7 +250,7 @@ export default function F1Game() {
     ctx.stroke();
 
     // -- Driver helmet --
-    ctx.fillStyle = "#E8002D";
+    ctx.fillStyle = "#BF616A";
     ctx.beginPath();
     ctx.arc(hw * 0.18, 0, 2.5, 0, Math.PI * 2);
     ctx.fill();
@@ -262,7 +262,7 @@ export default function F1Game() {
     ctx.fillRect(hw * 0.7, -hh * 0.8, 2, hh * 0.5);
     ctx.fillRect(hw * 0.7, hh * 0.3, 2, hh * 0.5);
     // Front wing main planes
-    ctx.strokeStyle = "#E8002D";
+    ctx.strokeStyle = "#BF616A";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(hw * 0.72, -hh * 0.8);
@@ -358,13 +358,13 @@ export default function F1Game() {
       // ── Kerb strips ──
       const kerbScroll = s.scrollOffset % (kerbH * 2);
       for (let kx = -kerbScroll; kx < w + kerbH * 2; kx += kerbH * 2) {
-        ctx.fillStyle = "#E8002D";
+        ctx.fillStyle = "#BF616A";
         ctx.fillRect(kx, grandstandH, kerbH, kerbH);
         ctx.fillStyle = "#fff";
         ctx.fillRect(kx + kerbH, grandstandH, kerbH, kerbH);
         ctx.fillStyle = "#fff";
         ctx.fillRect(kx, h - grandstandH - kerbH, kerbH, kerbH);
-        ctx.fillStyle = "#E8002D";
+        ctx.fillStyle = "#BF616A";
         ctx.fillRect(kx + kerbH, h - grandstandH - kerbH, kerbH, kerbH);
       }
 
@@ -488,7 +488,7 @@ export default function F1Game() {
         ctx.save();
         ctx.globalAlpha = popAlpha;
         ctx.font = "bold 16px monospace";
-        ctx.fillStyle = "#FFD700";
+        ctx.fillStyle = "#EBCB8B";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(s.scorePopText, s.scorePopX, popY);
@@ -948,7 +948,7 @@ export default function F1Game() {
                   onKeyDown={(e) => e.key === "Enter" && handleSaveScore()}
                   placeholder="Your name"
                   maxLength={20}
-                  className="flex-1 bg-[#0d1b2a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+                  className="flex-1 bg-[#3B4252] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
                   autoFocus
                 />
                 <button

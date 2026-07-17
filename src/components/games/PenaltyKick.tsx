@@ -15,15 +15,15 @@ const FIELD_GREEN_ALT = "#1a6b1f";
 const NET_BG = "rgba(0,0,0,0.45)";
 const POST_COLOR = "#ccc";
 const CROSSBAR_HIGHLIGHT = "#fff";
-const KEEPER_JERSEY = "#FF8F00";
+const KEEPER_JERSEY = "#D08770";
 const KEEPER_SHORTS = "#1a1a2e";
 const KEEPER_SKIN = "#E8B87A";
 const KEEPER_GLOVES = "#4CAF50";
 const BALL_COLOR = "#fff";
 const BALL_PANEL = "#222";
-const GOAL_GREEN = "#00E676";
+const GOAL_GREEN = "#A3BE8C";
 const SAVE_RED = "#EF4444";
-const GOLD = "#FFD700";
+const GOLD = "#EBCB8B";
 
 // --- Canvas dimensions ---
 const CANVAS_W = 500;
@@ -63,7 +63,7 @@ function zoneCenter(zone: Zone): { x: number; y: number } {
   };
 }
 
-const CONFETTI_COLORS = ["#00E676", "#FFD700", "#fff", "#4CAF50", "#FF5722", "#2196F3"];
+const CONFETTI_COLORS = ["#A3BE8C", "#EBCB8B", "#fff", "#4CAF50", "#FF5722", "#2196F3"];
 
 function getBasePoints(streak: number): number {
   if (streak >= 8) return 5;
@@ -879,7 +879,7 @@ export default function PenaltyKick() {
               onKeyDown={(e) => e.key === "Enter" && handleSaveScore()}
               placeholder="Your name"
               maxLength={20}
-              className="flex-1 bg-[#0d1b2a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+              className="flex-1 bg-[#3B4252] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
               autoFocus
             />
             <button
@@ -894,9 +894,9 @@ export default function PenaltyKick() {
 
       {/* Leaderboard */}
       <div className="w-full lg:w-72 flex-shrink-0">
-        <div className="rounded-xl border border-white/10 bg-[#112d4e] overflow-hidden">
+        <div className="rounded-xl border border-white/10 bg-[#434C5E] overflow-hidden">
           <div className="border-b border-white/10 px-4 py-3">
-            <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold uppercase tracking-wide text-[#DD550C]">
+            <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold uppercase tracking-wide text-[#D08770]">
               Leaderboard
             </h3>
           </div>
@@ -914,9 +914,9 @@ export default function PenaltyKick() {
                   <span
                     className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
                       i === 0
-                        ? "bg-[#DD550C] text-white"
+                        ? "bg-[#D08770] text-white"
                         : i < 3
-                        ? "bg-[#DD550C]/50 text-white"
+                        ? "bg-[#D08770]/50 text-white"
                         : "bg-white/10 text-gray-400"
                     }`}
                   >
@@ -927,7 +927,7 @@ export default function PenaltyKick() {
                       {entry.name}
                     </p>
                   </div>
-                  <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#DD550C]">
+                  <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#D08770]">
                     {entry.score.toLocaleString()}
                   </span>
                 </div>

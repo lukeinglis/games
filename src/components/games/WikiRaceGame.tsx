@@ -231,7 +231,7 @@ function SpinWheel({
       <div className="text-[10px] font-heading uppercase tracking-widest text-gray-500 mb-2 text-center">
         {label}
       </div>
-      <div className="relative h-[120px] overflow-hidden rounded-lg border border-white/10 bg-[#0d1b2a]">
+      <div className="relative h-[120px] overflow-hidden rounded-lg border border-white/10 bg-[#3B4252]">
         {/* Selection indicator */}
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-10 border-y border-blue-400/40 bg-blue-400/10 z-10 pointer-events-none" />
 
@@ -498,7 +498,7 @@ export default function WikiRaceGame() {
           const cy = rect.height / 3;
           setParticles(
             createParticleBurst(cx, cy, 40, [
-              "#FFD700", "#4fc3f7", "#81C784", "#E040FB", "#FF7043",
+              "#EBCB8B", "#4fc3f7", "#81C784", "#E040FB", "#FF7043",
             ], ["*", "+", "W", "!", "o"]),
           );
         }
@@ -762,13 +762,13 @@ export default function WikiRaceGame() {
                 </span>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
-                <div className="flex items-center gap-1.5 bg-[#0d1b2a] rounded px-2.5 py-1 border border-white/10">
+                <div className="flex items-center gap-1.5 bg-[#3B4252] rounded px-2.5 py-1 border border-white/10">
                   <span className="text-[10px] text-gray-500">TIME</span>
                   <span className="font-heading font-bold text-white text-sm tabular-nums">
                     {formatTime(elapsedMs)}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 bg-[#0d1b2a] rounded px-2.5 py-1 border border-white/10">
+                <div className="flex items-center gap-1.5 bg-[#3B4252] rounded px-2.5 py-1 border border-white/10">
                   <span className="text-[10px] text-gray-500">HOPS</span>
                   <span className="font-heading font-bold text-blue-300 text-sm tabular-nums">
                     {hops}
@@ -825,7 +825,7 @@ export default function WikiRaceGame() {
           {/* Wikipedia content */}
           <div
             ref={contentRef}
-            className="wiki-content flex-1 overflow-y-auto rounded-lg border border-white/10 bg-[#0d1b2a] p-4 sm:p-6"
+            className="wiki-content flex-1 overflow-y-auto rounded-lg border border-white/10 bg-[#3B4252] p-4 sm:p-6"
             style={{ display: loading ? "none" : undefined }}
           />
         </div>
@@ -846,15 +846,15 @@ export default function WikiRaceGame() {
 
           {/* Stats */}
           <div className="flex justify-center gap-4 flex-wrap">
-            <div className="bg-[#0d1b2a] border border-white/10 rounded-lg px-4 py-3 min-w-[100px]">
+            <div className="bg-[#3B4252] border border-white/10 rounded-lg px-4 py-3 min-w-[100px]">
               <div className="text-[10px] font-heading uppercase tracking-widest text-gray-500 mb-1">Time</div>
               <div className="font-heading font-bold text-white text-lg">{formatTime(elapsedMs)}</div>
             </div>
-            <div className="bg-[#0d1b2a] border border-white/10 rounded-lg px-4 py-3 min-w-[100px]">
+            <div className="bg-[#3B4252] border border-white/10 rounded-lg px-4 py-3 min-w-[100px]">
               <div className="text-[10px] font-heading uppercase tracking-widest text-gray-500 mb-1">Hops</div>
               <div className="font-heading font-bold text-blue-300 text-lg">{hops}</div>
             </div>
-            <div className="bg-[#0d1b2a] border border-white/10 rounded-lg px-4 py-3 min-w-[100px]">
+            <div className="bg-[#3B4252] border border-white/10 rounded-lg px-4 py-3 min-w-[100px]">
               <div className="text-[10px] font-heading uppercase tracking-widest text-gray-500 mb-1">Score</div>
               <div className="font-heading font-bold text-gold text-lg">{finalScore}</div>
             </div>
@@ -867,7 +867,7 @@ export default function WikiRaceGame() {
           </div>
 
           {/* Path taken */}
-          <div className="bg-[#0d1b2a] border border-white/10 rounded-lg p-4 text-left max-w-md mx-auto">
+          <div className="bg-[#3B4252] border border-white/10 rounded-lg p-4 text-left max-w-md mx-auto">
             <div className="text-[10px] font-heading uppercase tracking-widest text-gray-500 mb-2">
               Your Path ({path.length} pages)
             </div>
@@ -901,7 +901,7 @@ export default function WikiRaceGame() {
                 onKeyDown={(e) => e.key === "Enter" && handleSaveScore()}
                 placeholder="Your name"
                 maxLength={20}
-                className="flex-1 bg-[#0d1b2a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+                className="flex-1 bg-[#3B4252] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
               />
               <button
                 onClick={handleSaveScore}
@@ -951,7 +951,7 @@ export default function WikiRaceGame() {
 
           {/* Path attempted */}
           {path.length > 0 && (
-            <div className="bg-[#0d1b2a] border border-white/10 rounded-lg p-4 text-left max-w-md mx-auto">
+            <div className="bg-[#3B4252] border border-white/10 rounded-lg p-4 text-left max-w-md mx-auto">
               <div className="text-[10px] font-heading uppercase tracking-widest text-gray-500 mb-2">
                 Your Path ({path.length} pages, {hops} hops)
               </div>

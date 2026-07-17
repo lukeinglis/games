@@ -89,7 +89,7 @@ export default function GameLeaderboard({
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0d1b2a]/90 backdrop-blur-sm overflow-hidden">
+    <div className="rounded-xl border border-white/10 bg-[#3B4252]/90 backdrop-blur-sm overflow-hidden">
       <button
         onClick={() => setCollapsed((c) => !c)}
         className="w-full flex items-center justify-between px-4 py-3 sm:cursor-default"

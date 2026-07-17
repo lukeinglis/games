@@ -949,7 +949,7 @@ function getStreakMultiplier(streak: number): { mult: number; label: string } {
 function getStreakColor(streak: number): string {
   if (streak >= 10) return "#ff4444";
   if (streak >= 7) return "#ff8800";
-  if (streak >= 5) return "#FFD700";
+  if (streak >= 5) return "#EBCB8B";
   if (streak >= 3) return "#6366F1";
   return "#888";
 }
@@ -1179,7 +1179,7 @@ export default function TokenBlitzGame() {
           const cy = rect.height / 3;
           const chars = isFast ? ["★", "✓", "⚡"] : ["✓", "•", "●"];
           const colors = isFast
-            ? ["#FFD700", "#FFA500", "#FFEC8B"]
+            ? ["#EBCB8B", "#FFA500", "#FFEC8B"]
             : ["#4ade80", "#22c55e", "#86efac"];
           setParticles((prev) => [
             ...prev,

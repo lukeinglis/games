@@ -625,7 +625,7 @@ export default function HallucinationHunterGame() {
         id: particleIdRef.current,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        color: ["#FFD700", "#00E676", "#FF4081", "#2979FF", "#AA00FF"][Math.floor(Math.random() * 5)],
+        color: ["#EBCB8B", "#A3BE8C", "#FF4081", "#2979FF", "#B48EAD"][Math.floor(Math.random() * 5)],
       };
     });
     setParticles(newParticles);
