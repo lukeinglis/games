@@ -34,4 +34,26 @@ export function saveToLeaderboard(storageKey: string, name: string, score: numbe
   try {
     localStorage.setItem(storageKey, JSON.stringify(entries.slice(0, 10)));
   } catch { /* storage full */ }
+
+  submitScoreToAPI(storageKey, name, score);
+}
+
+function submitScoreToAPI(slug: string, name: string, score: number) {
+  fetch(`/api/scores/${encodeURIComponent(slug)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, score }),
+  }).catch(() => {});
+}
+
+export async function fetchLeaderboard(slug: string): Promise<LeaderboardEntry[]> {
+  try {
+    const res = await fetch(`/api/scores/${encodeURIComponent(slug)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    return data;
+  } catch {
+    return [];
+  }
 }

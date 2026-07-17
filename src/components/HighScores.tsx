@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { games } from "@/data/games";
+import { fetchLeaderboard } from "@/lib/game-leaderboard";
 
 interface AggregatedScore {
   game: string;
@@ -72,12 +73,41 @@ function formatDate(iso: string): string {
 }
 
 export default function HighScores() {
-  const [scores] = useState<AggregatedScore[]>(() => loadAllScores());
+  const [scores, setScores] = useState<AggregatedScore[]>(() => loadAllScores());
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
     () => false,
   );
+
+  useEffect(() => {
+    Promise.all(
+      LOCAL_GAMES.map(async (game) => {
+        const remote = await fetchLeaderboard(game.slug);
+        return remote.map((entry) => ({
+          game: game.title,
+          gameEmoji: game.emoji,
+          gameColor: game.color,
+          name: entry.name,
+          score: entry.score,
+          date: entry.date || "",
+        }));
+      })
+    ).then((results) => {
+      const remote = results.flat();
+      if (remote.length > 0) {
+        setScores((prev) => {
+          const seen = new Set(prev.map((s) => `${s.name}|${s.score}|${s.game}`));
+          const merged = [...prev];
+          for (const s of remote) {
+            const key = `${s.name}|${s.score}|${s.game}`;
+            if (!seen.has(key)) { seen.add(key); merged.push(s); }
+          }
+          return merged.sort((a, b) => b.score - a.score).slice(0, 10);
+        });
+      }
+    });
+  }, []);
 
   if (!mounted) return null;
   if (scores.length === 0) {
