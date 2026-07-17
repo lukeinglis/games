@@ -120,6 +120,7 @@ export const games: Game[] = [
     category: "Trivia",
     color: "#3B82F6",
     emoji: "📖",
+    thumbnail: "/thumbnails/wiki-race.png",
     url: "/games/wiki-race",
     featured: true,
     hot: true,
