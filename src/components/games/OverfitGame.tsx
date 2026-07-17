@@ -23,19 +23,19 @@ const PLOT_W = PLOT_RIGHT - PLOT_LEFT;
 const PLOT_H = PLOT_BOTTOM - PLOT_TOP;
 
 // --- Colors ---
-const BG_COLOR = "#0a0e1a";
+const BG_COLOR = "#2E3440";
 const GRID_COLOR = "rgba(100, 200, 255, 0.08)";
 const AXIS_COLOR = "rgba(100, 200, 255, 0.25)";
 const POINT_COLOR = "#00e5ff";
 const POINT_GLOW = "rgba(0, 229, 255, 0.3)";
-const CURVE_COLOR = "#ff6ec7";
-const TRUE_CURVE_COLOR = "#00e676";
+const CURVE_COLOR = "#B48EAD";
+const TRUE_CURVE_COLOR = "#A3BE8C";
 const TRUE_CURVE_GLOW = "rgba(0, 230, 118, 0.25)";
 const LABEL_COLOR = "rgba(180, 220, 255, 0.6)";
-const TEAL = "#00BFA5";
-const PINK = "#ff6ec7";
+const TEAL = "#8FBCBB";
+const PINK = "#B48EAD";
 const RED = "#ff4444";
-const GREEN = "#00e676";
+const GREEN = "#A3BE8C";
 
 // --- True function generators ---
 type TrueFunction = (x: number) => number;
@@ -922,7 +922,7 @@ export default function OverfitGame() {
         ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
         ctx.font = "bold 36px monospace";
-        ctx.fillStyle = "#ff6ec7";
+        ctx.fillStyle = "#B48EAD";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("GAME OVER", CANVAS_W / 2, CANVAS_H / 2 - 70);
@@ -1011,7 +1011,7 @@ export default function OverfitGame() {
             </button>
             <button
               onClick={submitFit}
-              className="px-5 py-2 rounded-lg bg-[#00BFA5] hover:bg-[#00d4b8] text-sm font-bold text-[#0a0e1a] transition-colors uppercase tracking-wide"
+              className="px-5 py-2 rounded-lg bg-[#8FBCBB] hover:bg-[#00d4b8] text-sm font-bold text-[#2E3440] transition-colors uppercase tracking-wide"
             >
               Submit Fit
             </button>
@@ -1033,7 +1033,7 @@ export default function OverfitGame() {
               onKeyDown={(e) => e.key === "Enter" && handleSaveScore()}
               placeholder="Your name"
               maxLength={20}
-              className="flex-1 bg-[#0d1b2a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+              className="flex-1 bg-[#3B4252] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
               autoFocus
             />
             <button
@@ -1054,19 +1054,19 @@ export default function OverfitGame() {
         {/* Score display below canvas */}
         {(gamePhase === "drawing" || gamePhase === "scored") && (
           <div className="text-center font-mono text-sm text-gray-400">
-            Total: <span className="text-[#00BFA5] font-bold">{displayScore} pts</span>
+            Total: <span className="text-[#8FBCBB] font-bold">{displayScore} pts</span>
           </div>
         )}
       </div>
 
       {/* Leaderboard */}
       <div className="w-full lg:w-72 flex-shrink-0">
-        <div className="rounded-xl border border-white/10 bg-[#0d1b2a]/90 backdrop-blur-sm overflow-hidden">
+        <div className="rounded-xl border border-white/10 bg-[#3B4252]/90 backdrop-blur-sm overflow-hidden">
           <div className="border-b border-white/10 px-4 py-3 flex items-center gap-2">
             <span className="text-lg" aria-hidden>
               🏆
             </span>
-            <h3 className="font-[family-name:var(--font-heading)] text-sm font-bold uppercase tracking-wide text-[#00BFA5]">
+            <h3 className="font-[family-name:var(--font-heading)] text-sm font-bold uppercase tracking-wide text-[#8FBCBB]">
               Leaderboard
             </h3>
           </div>
@@ -1084,9 +1084,9 @@ export default function OverfitGame() {
                   <span
                     className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
                       i === 0
-                        ? "bg-[#00BFA5] text-white"
+                        ? "bg-[#8FBCBB] text-white"
                         : i < 3
-                          ? "bg-[#00BFA5]/50 text-white"
+                          ? "bg-[#8FBCBB]/50 text-white"
                           : "bg-white/10 text-gray-400"
                     }`}
                   >
@@ -1097,7 +1097,7 @@ export default function OverfitGame() {
                       {entry.name}
                     </p>
                   </div>
-                  <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#00BFA5]">
+                  <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#8FBCBB]">
                     {entry.score.toLocaleString()}
                   </span>
                 </div>

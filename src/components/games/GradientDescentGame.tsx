@@ -31,8 +31,8 @@ const MAX_LIVES = 3;
 const MAX_NUDGES_PER_LEVEL = 50;
 
 // --- Colors ---
-const BG_COLOR = "#0a0e1a";
-const BALL_GLOW = "#00ffcc";
+const BG_COLOR = "#2E3440";
+const BALL_GLOW = "#88C0D0";
 const BALL_FILL = "#ffffff";
 
 // --- Types ---
@@ -635,7 +635,7 @@ export default function GradientDescentGame() {
           const goalCanvas = gridToCanvas(terrain.globalMinX, terrain.globalMinY);
           emitParticles(particlesRef.current, 60, goalCanvas.x, goalCanvas.y, {
             speedMin: 2, speedMax: 6, lifeFrames: 50,
-            colors: ["#00ff88", "#00ffcc", "#ffffff", "#FFD700"], sizeMin: 2, sizeMax: 5,
+            colors: ["#A3BE8C", "#88C0D0", "#ffffff", "#EBCB8B"], sizeMin: 2, sizeMax: 5,
           });
           shakeIntensityRef.current = 8;
           shakeTimerRef.current = 15;
@@ -872,14 +872,14 @@ export default function GradientDescentGame() {
 
         // Level
         ctx.font = "bold 14px sans-serif";
-        ctx.fillStyle = "#00ffcc";
+        ctx.fillStyle = "#88C0D0";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         ctx.fillText(`LVL ${levelRef.current}`, 18, 26);
 
         // Score
         ctx.font = "bold 14px sans-serif";
-        ctx.fillStyle = "#FFD700";
+        ctx.fillStyle = "#EBCB8B";
         ctx.textAlign = "center";
         ctx.fillText(`${scoreRef.current} PTS`, CANVAS_W / 2, 26);
 
@@ -888,7 +888,7 @@ export default function GradientDescentGame() {
         ctx.font = "12px sans-serif";
         for (let i = 0; i < MAX_LIVES; i++) {
           const lx = CANVAS_W - 20 - i * 18;
-          ctx.fillStyle = i < livesRef.current ? "#00ff88" : "rgba(255,100,100,0.3)";
+          ctx.fillStyle = i < livesRef.current ? "#A3BE8C" : "rgba(255,100,100,0.3)";
           ctx.beginPath();
           ctx.arc(lx, 26, 5, 0, Math.PI * 2);
           ctx.fill();
@@ -954,13 +954,13 @@ export default function GradientDescentGame() {
         ctx.globalAlpha = alpha;
 
         ctx.font = "bold 36px sans-serif";
-        ctx.fillStyle = "#00ff88";
+        ctx.fillStyle = "#A3BE8C";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("MINIMUM FOUND!", CANVAS_W / 2, CANVAS_H / 2 - 50);
 
         ctx.font = "bold 18px sans-serif";
-        ctx.fillStyle = "#FFD700";
+        ctx.fillStyle = "#EBCB8B";
         ctx.fillText(`Level ${levelRef.current} Complete`, CANVAS_W / 2, CANVAS_H / 2 - 10);
 
         ctx.font = "16px sans-serif";
@@ -1023,7 +1023,7 @@ export default function GradientDescentGame() {
 
         // Title
         ctx.font = "bold 34px sans-serif";
-        ctx.fillStyle = "#00ffcc";
+        ctx.fillStyle = "#88C0D0";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("GRADIENT", CANVAS_W / 2, CANVAS_H / 2 - 100);
@@ -1035,7 +1035,7 @@ export default function GradientDescentGame() {
         ctx.fillText("Find the global minimum.", CANVAS_W / 2, CANVAS_H / 2 - 20);
 
         // Icon: draw a simple landscape with ball
-        ctx.strokeStyle = "#00ffcc";
+        ctx.strokeStyle = "#88C0D0";
         ctx.lineWidth = 2;
         ctx.beginPath();
         const iconY = CANVAS_H / 2 + 30;
@@ -1054,14 +1054,14 @@ export default function GradientDescentGame() {
         ctx.fill();
 
         // Star at minimum
-        ctx.fillStyle = "#00ff88";
+        ctx.fillStyle = "#A3BE8C";
         ctx.font = "12px sans-serif";
         ctx.fillText("★", CANVAS_W / 2 + 18, iconY + Math.sin(58 * 0.15) * 8 + Math.sin(58 * 0.08 + 2) * 5 - 6);
 
         const blink = Math.sin(Date.now() * 0.004) > 0;
         if (blink) {
           ctx.font = "bold 16px sans-serif";
-          ctx.fillStyle = "#00ffcc";
+          ctx.fillStyle = "#88C0D0";
           ctx.fillText("TAP or PRESS SPACE", CANVAS_W / 2, CANVAS_H / 2 + 80);
         }
 
@@ -1082,7 +1082,7 @@ export default function GradientDescentGame() {
         ctx.fillText("GAME OVER", CANVAS_W / 2, CANVAS_H / 2 - 70);
 
         ctx.font = "bold 48px sans-serif";
-        ctx.fillStyle = "#FFD700";
+        ctx.fillStyle = "#EBCB8B";
         ctx.fillText(`${scoreRef.current}`, CANVAS_W / 2, CANVAS_H / 2 - 20);
 
         ctx.font = "16px sans-serif";
@@ -1095,7 +1095,7 @@ export default function GradientDescentGame() {
         const blink = Math.sin(Date.now() * 0.004) > 0;
         if (blink) {
           ctx.font = "bold 16px sans-serif";
-          ctx.fillStyle = "#00ffcc";
+          ctx.fillStyle = "#88C0D0";
           ctx.fillText("TAP or PRESS SPACE", CANVAS_W / 2, CANVAS_H / 2 + 65);
         }
       }
@@ -1128,7 +1128,7 @@ export default function GradientDescentGame() {
               onKeyDown={(e) => e.key === "Enter" && handleSaveScore()}
               placeholder="Your name"
               maxLength={20}
-              className="flex-1 bg-[#0d1b2a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+              className="flex-1 bg-[#3B4252] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
               autoFocus
             />
             <button
@@ -1143,9 +1143,9 @@ export default function GradientDescentGame() {
 
       {/* Leaderboard */}
       <div className="w-full lg:w-72 flex-shrink-0">
-        <div className="rounded-xl border border-white/10 bg-[#0d1b2a] overflow-hidden">
+        <div className="rounded-xl border border-white/10 bg-[#3B4252] overflow-hidden">
           <div className="border-b border-white/10 px-4 py-3">
-            <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold uppercase tracking-wide text-[#00ffcc]">
+            <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold uppercase tracking-wide text-[#88C0D0]">
               Leaderboard
             </h3>
           </div>
@@ -1163,9 +1163,9 @@ export default function GradientDescentGame() {
                   <span
                     className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
                       i === 0
-                        ? "bg-[#00ffcc] text-black"
+                        ? "bg-[#88C0D0] text-black"
                         : i < 3
-                        ? "bg-[#00ffcc]/50 text-white"
+                        ? "bg-[#88C0D0]/50 text-white"
                         : "bg-white/10 text-gray-400"
                     }`}
                   >
@@ -1176,7 +1176,7 @@ export default function GradientDescentGame() {
                       {entry.name}
                     </p>
                   </div>
-                  <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#FFD700]">
+                  <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#EBCB8B]">
                     {entry.score.toLocaleString()}
                   </span>
                 </div>

@@ -16,11 +16,11 @@ const FIELD_GREEN_ALT = "#2a5224";
 const YARD_LINE_COLOR = "rgba(255,255,255,0.45)";
 const YARD_NUM_COLOR = "rgba(255,255,255,0.22)";
 const HASH_COLOR = "rgba(255,255,255,0.2)";
-const PLAYER_COLOR = "#DD550C";
+const PLAYER_COLOR = "#D08770";
 const PLAYER_GLOW = "rgba(221,85,12,0.5)";
-const TACKLER_COLOR = "#0C2340";
-const POWERUP_COLOR = "#FFD700";
-const ENDZONE_COLOR = "#DD550C";
+const TACKLER_COLOR = "#2E3440";
+const POWERUP_COLOR = "#EBCB8B";
+const ENDZONE_COLOR = "#D08770";
 const SIDELINE_COLOR = "rgba(255,255,255,0.35)";
 
 const CANVAS_W = 400;
@@ -51,8 +51,8 @@ const YARD_LINE_SPACING = 60;
 
 const LOCALSTORAGE_KEY = "portal-breakaway-scores";
 
-const GOAL_COLORS = ["#00cc44", "#FFD700", "#ffffff"];
-const TRAIL_COLORS = ["#DD550C", "#FFD700"];
+const GOAL_COLORS = ["#00cc44", "#EBCB8B", "#ffffff"];
+const TRAIL_COLORS = ["#D08770", "#EBCB8B"];
 
 // --- Types ---
 
@@ -874,7 +874,7 @@ export default function BreakawayGame() {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("FIRST DOWN!", 2, 2);
-        ctx.fillStyle = "#FFD700";
+        ctx.fillStyle = "#EBCB8B";
         ctx.fillText("FIRST DOWN!", 0, 0);
 
         // Points earned
@@ -1086,7 +1086,7 @@ export default function BreakawayGame() {
               onKeyDown={(e) => e.key === "Enter" && handleSaveScore()}
               placeholder="Your name"
               maxLength={20}
-              className="flex-1 bg-[#0d1b2a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
+              className="flex-1 bg-[#3B4252] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"
               autoFocus
             />
             <button
@@ -1101,9 +1101,9 @@ export default function BreakawayGame() {
 
       {/* Leaderboard */}
       <div className="w-full lg:w-72 flex-shrink-0">
-        <div className="rounded-xl border border-white/10 bg-[#112d4e] overflow-hidden">
+        <div className="rounded-xl border border-white/10 bg-[#434C5E] overflow-hidden">
           <div className="border-b border-white/10 px-4 py-3">
-            <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold uppercase tracking-wide text-[#DD550C]">
+            <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold uppercase tracking-wide text-[#D08770]">
               Leaderboard
             </h3>
           </div>
@@ -1118,16 +1118,16 @@ export default function BreakawayGame() {
                   key={`${entry.name}-${entry.score}-${i}`}
                   className={`flex items-center gap-3 px-4 py-2.5 ${
                     scoreRank === i + 1 && scoreSaved
-                      ? "bg-[#DD550C]/10"
+                      ? "bg-[#D08770]/10"
                       : "hover:bg-white/5"
                   } transition-colors`}
                 >
                   <span
                     className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
                       i === 0
-                        ? "bg-[#DD550C] text-white"
+                        ? "bg-[#D08770] text-white"
                         : i < 3
-                        ? "bg-[#DD550C]/50 text-white"
+                        ? "bg-[#D08770]/50 text-white"
                         : "bg-white/10 text-gray-400"
                     }`}
                   >
@@ -1138,7 +1138,7 @@ export default function BreakawayGame() {
                       {entry.name}
                     </p>
                   </div>
-                  <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#DD550C]">
+                  <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#D08770]">
                     {entry.score.toLocaleString()} pts
                   </span>
                 </div>
@@ -1148,7 +1148,7 @@ export default function BreakawayGame() {
           {gameState === "gameover" && scoreSaved && scoreRank && (
             <div className="border-t border-white/10 px-4 py-3 text-center">
               <p className="text-xs text-gray-400">
-                You placed <span className="font-bold text-[#DD550C]">#{scoreRank}</span>!
+                You placed <span className="font-bold text-[#D08770]">#{scoreRank}</span>!
               </p>
             </div>
           )}

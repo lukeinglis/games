@@ -1,18 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --color-navy: #0A1628;
-  --color-navy-light: #132240;
-  --color-navy-lighter: #1C3360;
-  --color-gold: #FFD700;
-  --color-gold-dark: #B8960F;
-  --color-accent-green: #00E676;
-  --color-pitch-green: #1B5E20;
-  --color-action-red: #FF1744;
-  --color-puzzle-purple: #AA00FF;
-  --color-sports-blue: #2979FF;
-  --color-hot-pink: #FF4081;
-  --color-orange: #FF8C00;
+  /* Nord Polar Night */
+  --color-navy: #2E3440;
+  --color-navy-light: #3B4252;
+  --color-navy-lighter: #434C5E;
+  /* Nord Aurora + Frost accents */
+  --color-gold: #EBCB8B;
+  --color-gold-dark: #D4A843;
+  --color-accent-green: #A3BE8C;
+  --color-pitch-green: #5A7A4A;
+  --color-action-red: #BF616A;
+  --color-puzzle-purple: #B48EAD;
+  --color-sports-blue: #5E81AC;
+  --color-hot-pink: #BF616A;
+  --color-orange: #D08770;
 
   --font-heading: var(--font-press-start);
   --font-body: var(--font-source-sans);
@@ -20,7 +22,7 @@
 
 body {
   background-color: var(--color-navy);
-  color: #ededed;
+  color: #D8DEE9;
   font-family: var(--font-body), "Source Sans 3", sans-serif;
 }
 
@@ -65,11 +67,11 @@ body {
 }
 
 .glow-gold {
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4), 0 0 30px rgba(255, 215, 0, 0.1);
+  box-shadow: 0 0 15px rgba(235, 203, 139, 0.4), 0 0 30px rgba(235, 203, 139, 0.1);
 }
 
 .glow-green {
-  box-shadow: 0 0 15px rgba(0, 230, 118, 0.4), 0 0 30px rgba(0, 230, 118, 0.1);
+  box-shadow: 0 0 15px rgba(163, 190, 140, 0.4), 0 0 30px rgba(163, 190, 140, 0.1);
 }
 
 .animate-marquee {
@@ -86,7 +88,7 @@ body {
 
 .hero-banner {
   background:
-    linear-gradient(135deg, #1a0a2e 0%, #0A1628 30%, #132240 60%, #1a0a2e 100%);
+    linear-gradient(135deg, #2E3440 0%, #3B4252 50%, #2E3440 100%);
   border-bottom: 3px solid var(--color-gold);
   position: relative;
   overflow: hidden;
@@ -100,13 +102,13 @@ body {
     90deg,
     transparent,
     transparent 60px,
-    rgba(255, 215, 0, 0.03) 60px,
-    rgba(255, 215, 0, 0.03) 61px
+    rgba(235, 203, 139, 0.03) 60px,
+    rgba(235, 203, 139, 0.03) 61px
   );
 }
 
 .ticker-tape {
-  background: linear-gradient(90deg, var(--color-gold), var(--color-orange), var(--color-gold));
+  background: linear-gradient(90deg, #5E81AC, #81A1C1, #5E81AC);
   overflow: hidden;
   white-space: nowrap;
 }
