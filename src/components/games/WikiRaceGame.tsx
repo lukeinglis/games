@@ -174,27 +174,17 @@ function SpinWheel({
   spinning: boolean;
   label: string;
 }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [spinItems, setSpinItems] = useState<string[]>(() => buildDisplayItems(items, null));
+  const [offset, setOffset] = useState(0);
   const animRef = useRef<number | null>(null);
-  const [displayItems] = useState(() => buildDisplayItems(items, selected));
   const prevSpinning = useRef(false);
 
-  // Rebuild display items when spinning starts, using DOM manipulation instead of setState
   useEffect(() => {
     if (spinning && !prevSpinning.current) {
       prevSpinning.current = true;
-      const container = scrollRef.current;
-      if (!container) return;
-
-      // Generate fresh items directly in the DOM
       const freshItems = buildDisplayItems(items, selected);
-      container.innerHTML = "";
-      freshItems.forEach((item) => {
-        const div = document.createElement("div");
-        div.className = "h-10 flex items-center justify-center text-sm text-gray-400 px-2 truncate";
-        div.textContent = item;
-        container.appendChild(div);
-      });
+      setSpinItems(freshItems);
+      setOffset(0);
 
       const totalDistance = (freshItems.length - 3) * 40;
       let traveled = 0;
@@ -202,14 +192,11 @@ function SpinWheel({
 
       const tick = () => {
         traveled += speed;
-
         const progress = traveled / totalDistance;
         if (progress > 0.6) {
           speed = Math.max(0.5, 18 * (1 - progress) * 2);
         }
-
-        container.scrollTop = traveled;
-
+        setOffset(traveled);
         if (traveled < totalDistance) {
           animRef.current = requestAnimationFrame(tick);
         }
@@ -231,19 +218,17 @@ function SpinWheel({
       <div className="text-[10px] font-heading uppercase tracking-widest text-gray-500 mb-2 text-center">
         {label}
       </div>
-      <div className="relative h-[120px] overflow-hidden rounded-lg border border-white/10 bg-[#3B4252]">
-        {/* Selection indicator */}
+      <div className="relative h-[120px] overflow-hidden rounded-lg border border-white/10 bg-navy-light">
         <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-10 border-y border-blue-400/40 bg-blue-400/10 z-10 pointer-events-none" />
 
         {spinning ? (
           <div
-            ref={scrollRef}
-            className="h-full overflow-hidden py-10"
-            style={{ scrollBehavior: "auto" }}
+            className="py-10"
+            style={{ transform: `translateY(-${offset}px)` }}
           >
-            {displayItems.map((item, i) => (
+            {spinItems.map((item, i) => (
               <div
-                key={`${item}-${i}`}
+                key={`spin-${i}`}
                 className="h-10 flex items-center justify-center text-sm text-gray-400 px-2 truncate"
               >
                 {item}
