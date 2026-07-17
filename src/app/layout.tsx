@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Press_Start_2P, Source_Sans_3 } from "next/font/google";
+import ReportBug from "@/components/ReportBug";
 import "./globals.css";
 
 const pressStart = Press_Start_2P({
@@ -63,6 +64,7 @@ export default function RootLayout({
         </div>
 
         <main className="flex-1">{children}</main>
+        <ReportBug />
 
         <footer className="border-t border-navy-lighter bg-navy-light/50 mt-12">
           <div className="max-w-6xl mx-auto px-4 py-6 text-center">
