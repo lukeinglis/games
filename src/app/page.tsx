@@ -5,7 +5,6 @@ import { games, type GameCategory } from "@/data/games";
 import { GameCard } from "@/components/GameCard";
 import { CategoryNav } from "@/components/CategoryNav";
 import { FeaturedGames } from "@/components/FeaturedGames";
-import HighScores from "@/components/HighScores";
 
 type Filter = "All" | GameCategory;
 
@@ -17,8 +16,6 @@ export default function Home() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <FeaturedGames />
-
-      <HighScores />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
         <h2 className="font-heading text-xs text-gray-500 uppercase tracking-widest">
