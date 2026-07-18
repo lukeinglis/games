@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { fetchLeaderboard } from "@/lib/game-leaderboard";
 
 interface LeaderboardEntry {
   name: string;
@@ -58,6 +59,25 @@ export function addScore(gameSlug: string, name: string, score: number) {
   entries.push({ name, score, date: new Date().toISOString() });
   entries.sort((a, b) => b.score - a.score);
   saveEntries(gameSlug, entries.slice(0, 10));
+
+  fetch(`/api/scores/${encodeURIComponent(gameSlug)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, score }),
+  }).catch(() => {});
+}
+
+function mergeEntries(local: LeaderboardEntry[], remote: LeaderboardEntry[]): LeaderboardEntry[] {
+  const seen = new Set<string>();
+  const merged: LeaderboardEntry[] = [];
+  for (const entry of [...local, ...remote]) {
+    const key = `${entry.name}|${entry.score}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(entry);
+    }
+  }
+  return merged.sort((a, b) => b.score - a.score).slice(0, 20);
 }
 
 export default function GameLeaderboard({
@@ -68,6 +88,14 @@ export default function GameLeaderboard({
   const [prevRefreshKey, setPrevRefreshKey] = useState(refreshKey);
   const [entries, setEntries] = useState<LeaderboardEntry[]>(() => loadEntries(gameSlug));
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+
+  useEffect(() => {
+    fetchLeaderboard(gameSlug).then((remote) => {
+      if (remote.length > 0) {
+        setEntries((prev) => mergeEntries(prev, remote));
+      }
+    });
+  }, [gameSlug, refreshKey]);
 
   if (prevRefreshKey !== refreshKey) {
     setPrevRefreshKey(refreshKey);
