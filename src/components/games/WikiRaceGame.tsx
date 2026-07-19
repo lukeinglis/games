@@ -385,22 +385,17 @@ export default function WikiRaceGame() {
       // Set raw HTML directly on the DOM element
       container.innerHTML = html;
 
-      // Hide unnecessary elements
+      // Hide game-irrelevant elements (keep the Wikipedia look)
       const hideSelectors = [
         ".reference", ".mw-editsection", ".reflist", ".navbox",
-        ".sidebar", ".external", ".noprint", ".metadata", ".catlinks",
-        ".hatnote", ".shortdescription", ".authority-control",
-        ".refbegin", ".references", ".navbox-styles", ".sistersitebox",
-        ".mw-empty-elt", ".mbox-small", ".mbox-text", ".ambox",
-        ".tmbox", ".ombox", ".cmbox", ".fmbox", ".dmbox", ".imbox",
-        ".portal", ".mw-authority-control", ".plainlinks",
-        ".mw-indicators", ".mw-cite-backlink", ".citation",
-        "sup.reference", ".noexcerpt", ".mw-kartographer-container",
-        ".mw-kartographer-map", ".locmap", ".mw-graph",
-        ".mw-redirect", ".infobox", ".wikitable", ".sidebar-content",
-        "img", "figure", ".thumb", ".image", ".mw-file-element",
-        ".mw-default-size", ".mw-halign-right", ".mw-halign-left",
-        ".mw-file-description",
+        ".navbox-styles", ".noprint", ".metadata", ".catlinks",
+        ".shortdescription", ".authority-control",
+        ".refbegin", ".references", ".sistersitebox",
+        ".mw-empty-elt", ".mbox-small", ".ambox",
+        ".mw-authority-control",
+        ".mw-indicators", ".mw-cite-backlink",
+        "sup.reference", ".noexcerpt",
+        ".mw-kartographer-container", ".mw-graph",
       ];
       container.querySelectorAll(hideSelectors.join(",")).forEach((el) => {
         (el as HTMLElement).style.display = "none";
@@ -810,7 +805,7 @@ export default function WikiRaceGame() {
           {/* Wikipedia content */}
           <div
             ref={contentRef}
-            className="wiki-content flex-1 overflow-y-auto rounded-lg border border-white/10 bg-[#3B4252] p-4 sm:p-6"
+            className="wiki-content flex-1 overflow-y-auto rounded-lg border border-white/10 bg-white p-4 sm:p-6"
             style={{ display: loading ? "none" : undefined }}
           />
         </div>
@@ -971,60 +966,30 @@ export default function WikiRaceGame() {
         </div>
       )}
 
+      {/* Load Wikipedia's Vector skin CSS for native styling */}
+      {/* eslint-disable-next-line @next/next/no-css-tags */}
+      <link
+        rel="stylesheet"
+        href="https://en.wikipedia.org/w/load.php?lang=en&modules=site.styles&only=styles&skin=vector"
+      />
+
       {/* ---- Wikipedia content styles ---- */}
       <style jsx global>{`
         .wiki-content {
-          color: #d1d5db;
+          color: #202122;
+          font-family: sans-serif;
           font-size: 0.9375rem;
-          line-height: 1.7;
+          line-height: 1.6;
           max-height: 100%;
         }
 
-        .wiki-content h1,
-        .wiki-content h2,
-        .wiki-content h3,
-        .wiki-content h4 {
-          color: #e5e7eb;
-          font-weight: 700;
-          margin-top: 1.5em;
-          margin-bottom: 0.5em;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-          padding-bottom: 0.3em;
-        }
-
-        .wiki-content h1 { font-size: 1.5rem; }
-        .wiki-content h2 { font-size: 1.25rem; }
-        .wiki-content h3 { font-size: 1.1rem; }
-        .wiki-content h4 { font-size: 1rem; }
-
         .wiki-content a {
-          color: #4fc3f7;
+          color: #0645ad;
           cursor: pointer;
-          border-bottom: 1px solid rgba(79, 195, 247, 0.3);
-          transition: all 0.15s;
+          text-decoration: none;
         }
         .wiki-content a:hover {
-          color: #81d4fa;
-          border-bottom-color: #81d4fa;
-        }
-
-        .wiki-content p {
-          margin-bottom: 0.75em;
-        }
-
-        .wiki-content ul,
-        .wiki-content ol {
-          padding-left: 1.5em;
-          margin-bottom: 0.75em;
-        }
-
-        .wiki-content li {
-          margin-bottom: 0.25em;
-        }
-
-        .wiki-content b,
-        .wiki-content strong {
-          color: #f3f4f6;
+          text-decoration: underline;
         }
 
         /* Hide unnecessary Wikipedia elements */
@@ -1035,7 +1000,6 @@ export default function WikiRaceGame() {
         .wiki-content .references,
         .wiki-content .navbox,
         .wiki-content .navbox-styles,
-        .wiki-content .sidebar,
         .wiki-content .sistersitebox,
         .wiki-content .noprint,
         .wiki-content .mw-empty-elt,
@@ -1053,100 +1017,49 @@ export default function WikiRaceGame() {
         .wiki-content .catlinks,
         .wiki-content .authority-control,
         .wiki-content .mw-authority-control,
-        .wiki-content .external,
         .wiki-content .plainlinks,
-        .wiki-content .hatnote,
         .wiki-content .mw-indicators,
         .wiki-content .mw-cite-backlink,
-        .wiki-content .citation,
         .wiki-content sup.reference,
         .wiki-content .noexcerpt,
         .wiki-content .mw-kartographer-container,
         .wiki-content .mw-kartographer-map,
         .wiki-content .locmap,
         .wiki-content .mw-graph,
-        .wiki-content .shortdescription,
-        .wiki-content .mw-redirect {
+        .wiki-content .shortdescription {
           display: none !important;
         }
 
-        /* Hide sections by heading text */
-        .wiki-content #See_also,
-        .wiki-content #References,
-        .wiki-content #External_links,
-        .wiki-content #Further_reading,
-        .wiki-content #Notes,
-        .wiki-content #Sources,
-        .wiki-content #Bibliography,
-        .wiki-content #Citations {
-          display: none !important;
-        }
-
-        /* Hide headings and content after References/External links */
-        .wiki-content .mw-heading:has(#References),
-        .wiki-content .mw-heading:has(#External_links),
-        .wiki-content .mw-heading:has(#See_also),
-        .wiki-content .mw-heading:has(#Further_reading),
-        .wiki-content .mw-heading:has(#Notes),
-        .wiki-content .mw-heading:has(#Sources),
-        .wiki-content .mw-heading:has(#Bibliography),
-        .wiki-content .mw-heading:has(#Citations) {
-          display: none !important;
-        }
-
-        /* Style infoboxes */
         .wiki-content .infobox,
-        .wiki-content .wikitable,
+        .wiki-content .sidebar,
         .wiki-content .sidebar-content {
           display: none !important;
         }
 
-        .wiki-content table {
-          border-collapse: collapse;
-          margin: 0.75em 0;
-          font-size: 0.85rem;
-          width: 100%;
-        }
-
-        .wiki-content table th,
-        .wiki-content table td {
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          padding: 0.4em 0.6em;
-          background: rgba(13, 27, 42, 0.5);
-        }
-
-        .wiki-content table th {
-          background: rgba(255, 255, 255, 0.05);
-          color: #e5e7eb;
-          font-weight: 600;
-        }
-
-        /* Hide images to keep things fast */
-        .wiki-content img,
-        .wiki-content figure,
         .wiki-content .thumb,
-        .wiki-content .image,
         .wiki-content .mw-file-element,
         .wiki-content .mw-default-size,
         .wiki-content .mw-halign-right,
         .wiki-content .mw-halign-left,
-        .wiki-content .mw-file-description {
+        .wiki-content figure.mw-halign-right,
+        .wiki-content figure.mw-halign-left,
+        .wiki-content figure.mw-default-size {
           display: none !important;
         }
 
-        /* Style the scrollbar */
+        /* Scrollbar */
         .wiki-content::-webkit-scrollbar {
-          width: 6px;
+          width: 8px;
         }
         .wiki-content::-webkit-scrollbar-track {
-          background: transparent;
+          background: #f1f1f1;
         }
         .wiki-content::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.15);
-          border-radius: 3px;
+          background: #c1c1c1;
+          border-radius: 4px;
         }
         .wiki-content::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.25);
+          background: #a1a1a1;
         }
 
         /* Breadcrumb scrollbar */
