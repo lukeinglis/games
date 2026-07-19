@@ -4,8 +4,7 @@ import { redis } from "@/lib/redis";
 const MAX_ENTRIES = 20;
 const VALID_SLUGS = new Set([
   "breakaway", "f1-racer", "penalty-kick", "field-goal", "guess-the-flag",
-  "gradient-descent", "overfit", "token-blitz", "hallucination-hunter",
-  "wiki-race",
+  "overfit", "token-blitz", "hallucination-hunter", "wiki-race",
 ]);
 
 function redisKey(slug: string) {

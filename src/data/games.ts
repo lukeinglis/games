@@ -79,18 +79,6 @@ export const games: Game[] = [
     featured: false,
   },
   {
-    slug: "gradient-descent",
-    title: "Gradient Descent",
-    tagline: "Find the minimum",
-    description: "Guide a ball down a loss landscape to find the global minimum. Dodge local minima traps and saddle points.",
-    category: "AI",
-    color: "#00BCD4",
-    emoji: "📉",
-    url: "/games/gradient-descent",
-    featured: false,
-    hot: true,
-  },
-  {
     slug: "overfit",
     title: "Overfit!",
     tagline: "Fit the curve",
