@@ -84,6 +84,6 @@ export function getStreakMultiplier(streak: number): number {
 export function getMultiplierColor(mult: number): string {
   if (mult >= 2) return "#ff4444";
   if (mult >= 1.5) return "#ff8800";
-  if (mult >= 1.25) return "#FFD700";
+  if (mult >= 1.25) return "#EBCB8B";
   return "white";
 }
