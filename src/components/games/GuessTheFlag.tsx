@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { getStreakMultiplier } from "@/lib/game-utils";
+import GameLeaderboard, { addScore } from "./GameLeaderboard";
 
 interface Team {
   code: string;
@@ -185,6 +186,9 @@ export default function GuessTheFlag() {
   const [activeParticles, setActiveParticles] = useState<{ idx: number; x: number; y: number; size: number; color: string; alpha: number }[]>([]);
   const [thinkingPulse, setThinkingPulse] = useState(false);
   const [comboPopText, setComboPopText] = useState("");
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [playerName, setPlayerName] = useState("");
+  const [leaderboardKey, setLeaderboardKey] = useState(0);
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -311,6 +315,13 @@ export default function GuessTheFlag() {
     setThinkingPulse(false);
   }, []);
 
+  const submitScore = useCallback(() => {
+    const name = playerName.trim() || "Anonymous";
+    addScore("guess-the-flag", name, score);
+    setShowNameInput(false);
+    setLeaderboardKey((k) => k + 1);
+  }, [playerName, score]);
+
   const startGame = useCallback(() => {
     usedCodesRef.current = new Set();
     streakRef.current = 0;
@@ -338,6 +349,8 @@ export default function GuessTheFlag() {
     setActiveParticles([]);
     setFlashType("");
     setComboPopText("");
+    setShowNameInput(false);
+    setPlayerName("");
     startTimeRef.current = Date.now();
     roundStartRef.current = Date.now();
     stopTimer();
@@ -408,6 +421,7 @@ export default function GuessTheFlag() {
               setHighScore(newScore);
               setIsNewHighScore(true);
             }
+            if (newScore > 0) setShowNameInput(true);
             setGameState("gameover");
           } else {
             setCurrentRound(nextRound);
@@ -438,6 +452,7 @@ export default function GuessTheFlag() {
             setHighScore(score);
             setIsNewHighScore(true);
           }
+          if (score > 0) setShowNameInput(true);
           setGameState("gameover");
         }, 1200);
       }
@@ -703,12 +718,38 @@ export default function GuessTheFlag() {
               New High Score!
             </p>
           )}
+
+          {showNameInput && (
+            <div className="mb-4 flex items-center gap-2 justify-center">
+              <input
+                type="text"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submitScore()}
+                placeholder="Your name"
+                maxLength={20}
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-accent-green w-36"
+                autoFocus
+              />
+              <button
+                onClick={submitScore}
+                className="rounded-lg bg-accent-green/20 border border-accent-green/40 px-3 py-2 text-sm font-bold text-accent-green hover:bg-accent-green/30 transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          )}
+
           <button
             onClick={startGame}
             className="font-heading rounded-lg bg-accent-green px-6 py-2.5 text-sm font-bold uppercase tracking-wide text-navy transition-all hover:bg-green-300"
           >
             Play Again
           </button>
+
+          <div className="mt-4">
+            <GameLeaderboard gameSlug="guess-the-flag" refreshKey={leaderboardKey} />
+          </div>
         </div>
       )}
 

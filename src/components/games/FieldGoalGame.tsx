@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createParticlePool, emitParticles, updateParticles, drawParticles, getStreakMultiplier, getMultiplierColor, type Particle } from "@/lib/game-utils";
-import { loadLeaderboard, saveToLeaderboard, type LeaderboardEntry } from "@/lib/game-leaderboard";
+import GameLeaderboard, { addScore } from "./GameLeaderboard";
 
 // ============================================================
 // Field Goal Frenzy: A canvas-based field goal kicking mini game
@@ -170,9 +170,9 @@ export default function FieldGoalGame() {
   // React state for overlay UI
   const [_gamePhase, setGamePhase] = useState<GamePhase>("menu");
   const [_displayScore, setDisplayScore] = useState(0);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard(STORAGE_KEY));
   const [showNameInput, setShowNameInput] = useState(false);
   const [playerName, setPlayerName] = useState("");
+  const [leaderboardKey, setLeaderboardKey] = useState(0);
   const showNameInputRef = useRef(false);
 
   useEffect(() => {
@@ -267,11 +267,10 @@ export default function FieldGoalGame() {
 
   const handleSaveScore = useCallback(() => {
     const name = playerName.trim() || "Anonymous";
-    const finalScore = scoreRef.current;
-    saveToLeaderboard(STORAGE_KEY, name, finalScore);
-    setLeaderboard(loadLeaderboard(STORAGE_KEY));
+    addScore("field-goal", name, scoreRef.current);
     setShowNameInput(false);
     showNameInputRef.current = false;
+    setLeaderboardKey((k) => k + 1);
   }, [playerName]);
 
   const lockPower = useCallback(() => {
@@ -1350,47 +1349,7 @@ export default function FieldGoalGame() {
 
       {/* Leaderboard */}
       <div className="w-full lg:w-72 flex-shrink-0">
-        <div className="rounded-xl border border-white/10 bg-[#434C5E] overflow-hidden">
-          <div className="border-b border-white/10 px-4 py-3">
-            <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold uppercase tracking-wide text-[#D08770]">
-              Leaderboard
-            </h3>
-          </div>
-          {leaderboard.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-gray-400">
-              No scores yet. Be the first!
-            </div>
-          ) : (
-            <div className="divide-y divide-white/5">
-              {leaderboard.map((entry, i) => (
-                <div
-                  key={`${entry.name}-${entry.score}-${i}`}
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors"
-                >
-                  <span
-                    className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                      i === 0
-                        ? "bg-[#D08770] text-white"
-                        : i < 3
-                        ? "bg-[#D08770]/50 text-white"
-                        : "bg-white/10 text-gray-400"
-                    }`}
-                  >
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-white">
-                      {entry.name}
-                    </p>
-                  </div>
-                  <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#D08770]">
-                    {entry.score.toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <GameLeaderboard gameSlug="field-goal" refreshKey={leaderboardKey} />
       </div>
     </div>
   );
