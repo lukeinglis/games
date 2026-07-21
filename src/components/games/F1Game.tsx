@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createParticlePool, emitParticles, updateParticles, drawParticles, getStreakMultiplier, getMultiplierColor, type Particle } from "@/lib/game-utils";
-import { loadLeaderboard, saveToLeaderboard, type LeaderboardEntry } from "@/lib/game-leaderboard";
+import GameLeaderboard, { addScore } from "./GameLeaderboard";
 
 // ── Team colors for barriers ──
 const TEAM_PALETTE = [
@@ -115,12 +115,12 @@ export default function F1Game() {
   const [displayScore, setDisplayScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [started, setStarted] = useState(false);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard(STORAGE_KEY));
   const [bestScore, setBestScore] = useState(0);
   const [finalBarriersPassed, setFinalBarriersPassed] = useState(0);
   const [finalStreak, setFinalStreak] = useState(0);
   const [showNameInput, setShowNameInput] = useState(false);
   const [playerName, setPlayerName] = useState("");
+  const [leaderboardKey, setLeaderboardKey] = useState(0);
 
   // Pre-rendered crowd strip (avoids hundreds of fillRect per frame)
   const crowdCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -750,10 +750,9 @@ export default function F1Game() {
 
   const handleSaveScore = useCallback(() => {
     const name = playerName.trim() || "Anonymous";
-    const finalScore = stateRef.current.score;
-    saveToLeaderboard(STORAGE_KEY, name, finalScore);
-    setLeaderboard(loadLeaderboard(STORAGE_KEY));
+    addScore("f1-racer", name, stateRef.current.score);
     setShowNameInput(false);
+    setLeaderboardKey((k) => k + 1);
   }, [playerName]);
 
   useEffect(() => {
@@ -976,41 +975,7 @@ export default function F1Game() {
         )}
       </div>
 
-      {leaderboard.length > 0 && (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-          <h3 className="font-semibold text-sm text-zinc-400 mb-3 uppercase tracking-wide">
-            Top Scores
-          </h3>
-          <div className="space-y-1.5">
-            {leaderboard.map((entry, i) => (
-              <div
-                key={`${entry.name}-${entry.score}-${entry.date}`}
-                className="flex items-center justify-between text-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`w-6 text-right font-mono ${
-                      i === 0
-                        ? "text-amber-400"
-                        : i === 1
-                          ? "text-zinc-300"
-                          : i === 2
-                            ? "text-amber-700"
-                            : "text-zinc-500"
-                    }`}
-                  >
-                    {i + 1}.
-                  </span>
-                  <span className="text-zinc-200">{entry.name}</span>
-                </div>
-                <span className="font-mono text-zinc-400">
-                  {entry.score.toLocaleString()}m
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <GameLeaderboard gameSlug="f1-racer" refreshKey={leaderboardKey} />
     </div>
   );
 }

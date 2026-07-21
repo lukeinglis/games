@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createParticlePool, emitParticles, updateParticles, drawParticles, getStreakMultiplier, getMultiplierColor, type Particle } from "@/lib/game-utils";
-import { loadLeaderboard, saveToLeaderboard, type LeaderboardEntry } from "@/lib/game-leaderboard";
+import GameLeaderboard, { addScore } from "./GameLeaderboard";
 
 // ============================================================
 // Breakaway: A Subway-Surfer-style football mini game
@@ -138,11 +138,9 @@ export default function BreakawayGame() {
   const [gameState, setGameState] = useState<GameState>("menu");
   const [, setYards] = useState(0);
   const [, setScore] = useState(0);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard(LOCALSTORAGE_KEY));
-  const [scoreSaved, setScoreSaved] = useState(false);
-  const [scoreRank, setScoreRank] = useState<number | null>(null);
   const [showNameInput, setShowNameInput] = useState(false);
   const [playerName, setPlayerName] = useState("");
+  const [leaderboardKey, setLeaderboardKey] = useState(0);
   const showNameInputRef = useRef(false);
 
   // --- Game logic ---
@@ -175,8 +173,6 @@ export default function BreakawayGame() {
     }
     setYards(0);
     setScore(0);
-    setScoreSaved(false);
-    setScoreRank(null);
     setShowNameInput(false);
     showNameInputRef.current = false;
     setPlayerName("");
@@ -215,17 +211,10 @@ export default function BreakawayGame() {
 
   const handleSaveScore = useCallback(() => {
     const name = playerName.trim() || "Anonymous";
-    const finalScore = scoreRef.current;
-    saveToLeaderboard(LOCALSTORAGE_KEY, name, finalScore);
-    const updated = loadLeaderboard(LOCALSTORAGE_KEY);
-    setLeaderboard(updated);
-    setScoreSaved(true);
-    const rank = updated.findIndex(
-      (e) => e.name === name && e.score === finalScore
-    );
-    setScoreRank(rank >= 0 ? rank + 1 : null);
+    addScore("breakaway", name, scoreRef.current);
     setShowNameInput(false);
     showNameInputRef.current = false;
+    setLeaderboardKey((k) => k + 1);
   }, [playerName]);
 
   const moveLane = useCallback((dir: -1 | 1) => {
@@ -1101,58 +1090,7 @@ export default function BreakawayGame() {
 
       {/* Leaderboard */}
       <div className="w-full lg:w-72 flex-shrink-0">
-        <div className="rounded-xl border border-white/10 bg-[#434C5E] overflow-hidden">
-          <div className="border-b border-white/10 px-4 py-3">
-            <h3 className="font-[family-name:var(--font-heading)] text-sm font-semibold uppercase tracking-wide text-[#D08770]">
-              Leaderboard
-            </h3>
-          </div>
-          {leaderboard.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-gray-400">
-              No scores yet. Be the first!
-            </div>
-          ) : (
-            <div className="divide-y divide-white/5">
-              {leaderboard.map((entry, i) => (
-                <div
-                  key={`${entry.name}-${entry.score}-${i}`}
-                  className={`flex items-center gap-3 px-4 py-2.5 ${
-                    scoreRank === i + 1 && scoreSaved
-                      ? "bg-[#D08770]/10"
-                      : "hover:bg-white/5"
-                  } transition-colors`}
-                >
-                  <span
-                    className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                      i === 0
-                        ? "bg-[#D08770] text-white"
-                        : i < 3
-                        ? "bg-[#D08770]/50 text-white"
-                        : "bg-white/10 text-gray-400"
-                    }`}
-                  >
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-white">
-                      {entry.name}
-                    </p>
-                  </div>
-                  <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#D08770]">
-                    {entry.score.toLocaleString()} pts
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-          {gameState === "gameover" && scoreSaved && scoreRank && (
-            <div className="border-t border-white/10 px-4 py-3 text-center">
-              <p className="text-xs text-gray-400">
-                You placed <span className="font-bold text-[#D08770]">#{scoreRank}</span>!
-              </p>
-            </div>
-          )}
-        </div>
+        <GameLeaderboard gameSlug="breakaway" refreshKey={leaderboardKey} />
       </div>
     </div>
   );

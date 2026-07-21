@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createParticlePool, emitParticles, updateParticles, drawParticles, type Particle } from "@/lib/game-utils";
-import { loadLeaderboard, saveToLeaderboard, type LeaderboardEntry } from "@/lib/game-leaderboard";
+import GameLeaderboard, { addScore } from "./GameLeaderboard";
 
 // ============================================================
 // Overfit!  A bias-variance tradeoff game
@@ -308,9 +308,9 @@ export default function OverfitGame() {
   // React state for overlay UI
   const [gamePhase, setGamePhase] = useState<GamePhase>("menu");
   const [displayScore, setDisplayScore] = useState(0);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() => loadLeaderboard(STORAGE_KEY));
   const [showNameInput, setShowNameInput] = useState(false);
   const [playerName, setPlayerName] = useState("");
+  const [leaderboardKey, setLeaderboardKey] = useState(0);
   const showNameInputRef = useRef(false);
 
   // --- Setup a new round ---
@@ -439,11 +439,10 @@ export default function OverfitGame() {
 
   const handleSaveScore = useCallback(() => {
     const name = playerName.trim() || "Anonymous";
-    const finalScore = totalScoreRef.current;
-    saveToLeaderboard(STORAGE_KEY, name, finalScore);
-    setLeaderboard(loadLeaderboard(STORAGE_KEY));
+    addScore("overfit", name, totalScoreRef.current);
     setShowNameInput(false);
     showNameInputRef.current = false;
+    setLeaderboardKey((k) => k + 1);
   }, [playerName]);
 
   // --- Advance from scored phase (tap to continue) ---
@@ -1258,50 +1257,7 @@ export default function OverfitGame() {
 
       {/* Leaderboard */}
       <div className="w-full lg:w-72 flex-shrink-0">
-        <div className="rounded-xl border border-white/10 bg-[#3B4252]/90 backdrop-blur-sm overflow-hidden">
-          <div className="border-b border-white/10 px-4 py-3 flex items-center gap-2">
-            <span className="text-lg" aria-hidden>
-              🏆
-            </span>
-            <h3 className="font-[family-name:var(--font-heading)] text-sm font-bold uppercase tracking-wide text-[#8FBCBB]">
-              Leaderboard
-            </h3>
-          </div>
-          {leaderboard.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-gray-400">
-              No scores yet. Be the first!
-            </div>
-          ) : (
-            <div className="divide-y divide-white/5">
-              {leaderboard.map((entry, i) => (
-                <div
-                  key={`${entry.name}-${entry.score}-${i}`}
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors"
-                >
-                  <span
-                    className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                      i === 0
-                        ? "bg-[#8FBCBB] text-white"
-                        : i < 3
-                          ? "bg-[#8FBCBB]/50 text-white"
-                          : "bg-white/10 text-gray-400"
-                    }`}
-                  >
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-white">
-                      {entry.name}
-                    </p>
-                  </div>
-                  <span className="font-[family-name:var(--font-heading)] text-sm font-bold text-[#8FBCBB]">
-                    {entry.score.toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <GameLeaderboard gameSlug="overfit" refreshKey={leaderboardKey} />
       </div>
     </div>
   );
