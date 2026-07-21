@@ -278,6 +278,17 @@ export default function OverfitGame() {
   // Streak
   const streakRef = useRef(0);
 
+  // Strikes
+  const strikesRef = useRef(0);
+  const showStrikeRef = useRef(false);
+
+  // Time bonus
+  const roundStartTimeRef = useRef(0);
+  const timeBonusRef = useRef(0);
+
+  // Live accuracy
+  const liveMseRef = useRef(-1);
+
   // Effects
   const particlesRef = useRef<Particle[]>(createParticlePool());
   const shakeTimerRef = useRef(0);
@@ -314,6 +325,10 @@ export default function OverfitGame() {
     scoreLabelRef.current = "";
     roundScoreRef.current = 0;
     scoredTimerRef.current = 0;
+    showStrikeRef.current = false;
+    timeBonusRef.current = 0;
+    liveMseRef.current = -1;
+    roundStartTimeRef.current = Date.now();
     phaseRef.current = "drawing";
     setGamePhase("drawing");
   }, []);
@@ -323,6 +338,7 @@ export default function OverfitGame() {
     roundRef.current = 1;
     totalScoreRef.current = 0;
     streakRef.current = 0;
+    strikesRef.current = 0;
     seedRef.current = Date.now();
     setDisplayScore(0);
     setShowNameInput(false);
@@ -342,7 +358,15 @@ export default function OverfitGame() {
     if (drawnPathRef.current.length < 5) return;
 
     const result = computeScore(drawnPathRef.current, dataPointsRef.current);
-    roundScoreRef.current = result.score;
+
+    // Time bonus
+    const elapsed = (Date.now() - roundStartTimeRef.current) / 1000;
+    let timeBonus = 0;
+    if (elapsed < 10) timeBonus = 20;
+    else if (elapsed < 15) timeBonus = 10;
+    timeBonusRef.current = timeBonus;
+
+    roundScoreRef.current = Math.min(100, result.score + timeBonus);
     scoreLabelRef.current = result.label;
     scoreLabelColorRef.current = result.labelColor;
     roundMseRef.current = result.mse;
@@ -351,10 +375,17 @@ export default function OverfitGame() {
 
     const isGoodFit = result.score >= 60;
 
+    // Strike check
+    showStrikeRef.current = false;
+    if (result.score < 30) {
+      strikesRef.current++;
+      showStrikeRef.current = true;
+    }
+
     if (isGoodFit) {
       streakRef.current++;
       const mult = getStreakMultiplier(streakRef.current);
-      const pts = Math.round(result.score * mult);
+      const pts = Math.round((result.score + timeBonus) * mult);
       totalScoreRef.current += pts;
       setDisplayScore(totalScoreRef.current);
 
@@ -368,7 +399,7 @@ export default function OverfitGame() {
       flashMaxRef.current = 20;
     } else {
       streakRef.current = 0;
-      totalScoreRef.current += result.score;
+      totalScoreRef.current += result.score + timeBonus;
       setDisplayScore(totalScoreRef.current);
 
       // Bad fit shake
@@ -384,7 +415,6 @@ export default function OverfitGame() {
       flashMaxRef.current = 18;
     }
 
-    scoredTimerRef.current = 120; // 2 seconds at 60fps
     phaseRef.current = "scored";
     setGamePhase("scored");
   }, []);
@@ -415,6 +445,17 @@ export default function OverfitGame() {
     setShowNameInput(false);
     showNameInputRef.current = false;
   }, [playerName]);
+
+  // --- Advance from scored phase (tap to continue) ---
+  const advanceFromScored = useCallback(() => {
+    if (phaseRef.current !== "scored") return;
+    if (strikesRef.current >= 3 || roundRef.current >= 10) {
+      endGame();
+    } else {
+      roundRef.current++;
+      setupRound();
+    }
+  }, [endGame, setupRound]);
 
   // --- Drawing input handlers ---
   useEffect(() => {
@@ -450,10 +491,13 @@ export default function OverfitGame() {
     }
 
     function onMouseDown(e: MouseEvent) {
+      if (phaseRef.current === "scored") {
+        advanceFromScored();
+        return;
+      }
       if (phaseRef.current !== "drawing") return;
       e.preventDefault();
       isDrawingRef.current = true;
-      drawnPathRef.current = [];
       const [cx, cy] = getCanvasPos(e.clientX, e.clientY);
       addPoint(cx, cy);
     }
@@ -471,10 +515,14 @@ export default function OverfitGame() {
     }
 
     function onTouchStart(e: TouchEvent) {
+      if (phaseRef.current === "scored") {
+        e.preventDefault();
+        advanceFromScored();
+        return;
+      }
       if (phaseRef.current !== "drawing") return;
       e.preventDefault();
       isDrawingRef.current = true;
-      drawnPathRef.current = [];
       const touch = e.touches[0];
       const [cx, cy] = getCanvasPos(touch.clientX, touch.clientY);
       addPoint(cx, cy);
@@ -551,15 +599,36 @@ export default function OverfitGame() {
       if (flashTimerRef.current > 0) flashTimerRef.current--;
 
       if (phase === "scored") {
-        scoredTimerRef.current--;
-        if (scoredTimerRef.current <= 0) {
-          // After 10 rounds, end game
-          if (roundRef.current >= 10) {
-            endGame();
-          } else {
-            roundRef.current++;
-            setupRound();
+        scoredTimerRef.current++;
+      }
+
+      // Live MSE during drawing
+      if (phase === "drawing") {
+        const path = drawnPathRef.current;
+        if (path.length >= 3) {
+          const sorted = [...path].sort((a, b) => a.x - b.x);
+          let totalSqErr = 0;
+          for (const dp of dataPointsRef.current) {
+            let closestY = sorted[0].y;
+            let minDist = Infinity;
+            for (let i = 0; i < sorted.length - 1; i++) {
+              if (sorted[i].x <= dp.x && sorted[i + 1].x >= dp.x) {
+                const t = (dp.x - sorted[i].x) / (sorted[i + 1].x - sorted[i].x + 1e-9);
+                closestY = sorted[i].y + t * (sorted[i + 1].y - sorted[i].y);
+                minDist = 0;
+                break;
+              }
+              const d1 = Math.abs(sorted[i].x - dp.x);
+              const d2 = Math.abs(sorted[i + 1].x - dp.x);
+              if (d1 < minDist) { minDist = d1; closestY = sorted[i].y; }
+              if (d2 < minDist) { minDist = d2; closestY = sorted[i + 1].y; }
+            }
+            const err = dp.y - closestY;
+            totalSqErr += err * err;
           }
+          liveMseRef.current = totalSqErr / dataPointsRef.current.length;
+        } else {
+          liveMseRef.current = -1;
         }
       }
 
@@ -772,12 +841,42 @@ export default function OverfitGame() {
         ctx.fillStyle = TEAL;
         ctx.fillText(String(totalScoreRef.current), 16, 28);
 
+        // Strike hearts (top right)
+        const heartY = 18;
+        for (let i = 0; i < 3; i++) {
+          const hx = CANVAS_W - 40 + i * 14;
+          ctx.font = "14px monospace";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          if (i < 3 - strikesRef.current) {
+            ctx.fillStyle = "#ff4466";
+          } else {
+            ctx.fillStyle = "rgba(255,68,102,0.2)";
+          }
+          ctx.fillText("❤", hx, heartY);
+        }
+
+        // Timer
+        if (phase === "drawing") {
+          const elapsed = (Date.now() - roundStartTimeRef.current) / 1000;
+          const remaining = Math.max(0, 30 - elapsed);
+          const timerStr = Math.ceil(remaining).toString();
+          ctx.fillStyle = "rgba(0,0,0,0.5)";
+          drawRoundRect(ctx, CANVAS_W - 100, 6, 50, 28, 6);
+          ctx.fill();
+          ctx.font = "bold 14px monospace";
+          ctx.fillStyle = remaining <= 10 ? "#ffab00" : remaining <= 5 ? RED : LABEL_COLOR;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(timerStr + "s", CANVAS_W - 75, 20);
+        }
+
         // Streak
         if (streakRef.current >= 3) {
           const mult = getStreakMultiplier(streakRef.current);
           const pulse = 1 + Math.sin(frameCountRef.current * 0.1) * 0.06;
           ctx.save();
-          ctx.translate(CANVAS_W - 80, 20);
+          ctx.translate(CANVAS_W / 2, 48);
           ctx.scale(pulse, pulse);
           ctx.font = "bold 12px monospace";
           ctx.fillStyle = getMultiplierColor(mult);
@@ -785,6 +884,18 @@ export default function OverfitGame() {
           ctx.textBaseline = "middle";
           ctx.fillText(`x${streakRef.current} STREAK ${mult}x`, 0, 0);
           ctx.restore();
+        }
+
+        // Live accuracy preview (bottom right of plot, during drawing)
+        if (phase === "drawing" && liveMseRef.current >= 0) {
+          const accuracy = Math.max(0, Math.min(100, 100 - liveMseRef.current * 2000));
+          const accStr = `Accuracy: ${Math.round(accuracy)}%`;
+          const accColor = accuracy >= 70 ? GREEN : accuracy >= 40 ? "#ffab00" : RED;
+          ctx.font = "bold 11px monospace";
+          ctx.fillStyle = accColor;
+          ctx.textAlign = "right";
+          ctx.textBaseline = "bottom";
+          ctx.fillText(accStr, PLOT_RIGHT - 4, PLOT_BOTTOM - 6);
         }
 
         // Difficulty indicator
@@ -803,41 +914,126 @@ export default function OverfitGame() {
 
       // --- Scored overlay ---
       if (phase === "scored") {
-        const fadeIn = Math.min((120 - scoredTimerRef.current) / 10, 1);
-        const bounceT = Math.min((120 - scoredTimerRef.current) / 20, 1);
+        const frames = scoredTimerRef.current;
+        const fadeIn = Math.min(frames / 10, 1);
+        const bounceT = Math.min(frames / 20, 1);
         const scale = 1 + Math.sin(bounceT * Math.PI) * 0.15;
+
+        const panelW = 240;
+        const panelH = 180;
 
         ctx.save();
         ctx.globalAlpha = fadeIn;
-        ctx.translate(CANVAS_W / 2, CANVAS_H / 2 + 30);
+        ctx.translate(CANVAS_W / 2, CANVAS_H / 2 + 20);
         ctx.scale(scale, scale);
 
         // Background pill
-        ctx.fillStyle = "rgba(0,0,0,0.7)";
-        drawRoundRect(ctx, -100, -45, 200, 90, 12);
+        ctx.fillStyle = "rgba(0,0,0,0.8)";
+        drawRoundRect(ctx, -panelW / 2, -panelH / 2, panelW, panelH, 12);
         ctx.fill();
 
-        // Score
-        ctx.font = "bold 36px monospace";
-        ctx.fillStyle = scoreLabelColorRef.current;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(String(roundScoreRef.current), 0, -14);
+        let yOff = -panelH / 2 + 18;
 
         // Label
         ctx.font = "bold 16px monospace";
-        ctx.fillText(scoreLabelRef.current, 0, 18);
+        ctx.fillStyle = scoreLabelColorRef.current;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(scoreLabelRef.current, 0, yOff);
+        yOff += 22;
+
+        // Accuracy bar
+        const mseTerm = Math.max(0, Math.min(100, 100 - roundMseRef.current * 2000));
+        const barW = 160;
+        const barH = 10;
+        const barX = -barW / 2;
+
+        ctx.font = "9px monospace";
+        ctx.fillStyle = LABEL_COLOR;
+        ctx.textAlign = "left";
+        ctx.fillText("Accuracy", barX, yOff);
+        ctx.textAlign = "right";
+        ctx.fillText(`${Math.round(mseTerm)}%`, barX + barW, yOff);
+        yOff += 8;
+
+        ctx.fillStyle = "rgba(255,255,255,0.1)";
+        drawRoundRect(ctx, barX, yOff, barW, barH, 3);
+        ctx.fill();
+        const accFill = (mseTerm / 100) * barW;
+        ctx.fillStyle = GREEN;
+        if (accFill > 0) {
+          drawRoundRect(ctx, barX, yOff, accFill, barH, 3);
+          ctx.fill();
+        }
+        yOff += barH + 8;
+
+        // Smoothness bar
+        const curvaturePenalty = Math.min(roundCurvatureRef.current * 1500, 80);
+        const smoothness = Math.max(0, 100 - curvaturePenalty);
+
+        ctx.font = "9px monospace";
+        ctx.fillStyle = LABEL_COLOR;
+        ctx.textAlign = "left";
+        ctx.fillText("Smoothness", barX, yOff);
+        ctx.textAlign = "right";
+        ctx.fillText(`${Math.round(smoothness)}%`, barX + barW, yOff);
+        yOff += 8;
+
+        ctx.fillStyle = "rgba(255,255,255,0.1)";
+        drawRoundRect(ctx, barX, yOff, barW, barH, 3);
+        ctx.fill();
+        const smoothFill = (smoothness / 100) * barW;
+        ctx.fillStyle = TEAL;
+        if (smoothFill > 0) {
+          drawRoundRect(ctx, barX, yOff, smoothFill, barH, 3);
+          ctx.fill();
+        }
+        yOff += barH + 12;
+
+        // Combined score
+        ctx.font = "bold 28px monospace";
+        ctx.fillStyle = scoreLabelColorRef.current;
+        ctx.textAlign = "center";
+        ctx.fillText(String(roundScoreRef.current), 0, yOff);
+
+        // Time bonus
+        if (timeBonusRef.current > 0) {
+          ctx.font = "bold 11px monospace";
+          ctx.fillStyle = "#00e5ff";
+          ctx.fillText(`+${timeBonusRef.current} TIME BONUS`, 0, yOff + 18);
+        }
 
         // Multiplier text
         if (streakRef.current >= 3 && roundScoreRef.current >= 60) {
           const mult = getStreakMultiplier(streakRef.current);
-          ctx.font = "bold 12px monospace";
+          ctx.font = "bold 11px monospace";
           ctx.fillStyle = getMultiplierColor(mult);
-          ctx.fillText(`${mult}x multiplier!`, 0, 38);
+          ctx.fillText(`${mult}x multiplier!`, 0, yOff + (timeBonusRef.current > 0 ? 32 : 18));
+        }
+
+        // Strike text
+        if (showStrikeRef.current) {
+          const strikePulse = Math.sin(frames * 0.15) * 0.1 + 1;
+          ctx.save();
+          ctx.scale(strikePulse, strikePulse);
+          ctx.font = "bold 18px monospace";
+          ctx.fillStyle = RED;
+          ctx.fillText("STRIKE!", 0, -panelH / 2 - 14);
+          ctx.restore();
         }
 
         ctx.restore();
         ctx.globalAlpha = 1;
+
+        // TAP TO CONTINUE (outside the scaled group, at bottom)
+        const blink = Math.sin(Date.now() * 0.005) > 0;
+        if (blink) {
+          ctx.font = "bold 13px monospace";
+          ctx.fillStyle = TEAL;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("TAP TO CONTINUE", CANVAS_W / 2, CANVAS_H - 18);
+        }
       }
 
       // --- Particles ---
@@ -913,7 +1109,7 @@ export default function OverfitGame() {
 
         ctx.font = "11px monospace";
         ctx.fillStyle = "rgba(180,220,255,0.35)";
-        ctx.fillText("10 rounds. Score 60+ for a good fit.", CANVAS_W / 2, CANVAS_H / 2 + 165);
+        ctx.fillText("10 rounds. 3 strikes and you're out!", CANVAS_W / 2, CANVAS_H / 2 + 165);
       }
 
       // --- Game Over overlay ---
@@ -933,11 +1129,10 @@ export default function OverfitGame() {
 
         ctx.font = "16px monospace";
         ctx.fillStyle = "rgba(180,220,255,0.7)";
-        ctx.fillText(
-          `${roundRef.current} rounds completed`,
-          CANVAS_W / 2,
-          CANVAS_H / 2 + 20,
-        );
+        const endReason = strikesRef.current >= 3
+          ? `Struck out after ${roundRef.current} rounds`
+          : `${roundRef.current} rounds completed`;
+        ctx.fillText(endReason, CANVAS_W / 2, CANVAS_H / 2 + 20);
 
         const blink = Math.sin(Date.now() * 0.004) > 0;
         if (blink) {
@@ -969,7 +1164,7 @@ export default function OverfitGame() {
 
     canvas.addEventListener("click", onClick);
     return () => canvas.removeEventListener("click", onClick);
-  }, [startGame]);
+  }, [startGame, advanceFromScored]);
 
   // --- Keyboard handler ---
   useEffect(() => {
@@ -979,12 +1174,14 @@ export default function OverfitGame() {
         const phase = phaseRef.current;
         if (phase === "menu" || (phase === "gameover" && !showNameInputRef.current)) {
           startGame();
+        } else if (phase === "scored") {
+          advanceFromScored();
         }
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [startGame]);
+  }, [startGame, advanceFromScored]);
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
@@ -1020,7 +1217,7 @@ export default function OverfitGame() {
 
         {gamePhase === "scored" && (
           <div className="text-sm text-gray-400 font-mono">
-            Next round in a moment...
+            Tap the canvas or press Space to continue
           </div>
         )}
 
